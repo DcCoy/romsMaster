@@ -4,8 +4,9 @@ classdef romsMaster
 % comparison figures against validation data, and many
 % other actions.
 %
-% Do begin, define the object
+% Do begin, define the object and initialize
 % - obj = romsMaster;
+% - obj = init(obj,'sim','peru')
 %
 % To view available routines
 % - methods(obj)
@@ -82,10 +83,8 @@ classdef romsMaster
 			end
 			if strcmp(A.sim,'peru');
                                 load('peru_sim.mat');
-                                obj.info.sim = ['Peru-Chile 10km'];
                         elseif strcmp(A.sim,'pacmed');
                                 load('pacmed_sim.mat');
-                                obj.info.sim = ['Pacific-Wide 25km'];
                         end
       
 			% - grab paths according to inputs
@@ -214,6 +213,11 @@ classdef romsMaster
 
 			% Add some other info
 			obj.info.Ext = ext;
+			if strcmp(A.sim,'peru');
+				obj.info.sim = 'peru_chile_0p1';
+                        elseif strcmp(A.sim,'pacmed');
+				obj.info.sim = 'pacmed_0p25';
+                        end
 
                         % - Grab time info from average file
                         fieldnames = {obj.info.Attributes.Name};
@@ -238,10 +242,62 @@ classdef romsMaster
 				
 		end % end methods init
 
+		function gridView(obj,varargin)
+                        % ----------------------
+                        % - Plots the lat/lon indices of a grid file
+			%
+			% - Usage:
+			%   gridView(obj,varargin)
+			%
+			% - Inputs:
+			%   dx - plot lon lines separated by dx (default = 20)
+			%   dy - plot lat lines separated by dy (default = 20)
+			%
+			% - Example:
+			%   gridView(obj,'dx',20,'dy',20)
+			% ----------------------
+
+			% Grab inputs (varargin)
+                        A.dx    = [20];
+			A.dy    = [20];
+			A.ticks = [0];
+                        A       = parse_pv_pairs(A,varargin);
+
+			% Plot lon/lat lines
+			fig  = piofigs('lfig',1.5);
+			[ax] = map_plot(fig,obj.grid.lon_rho,obj.grid.lat_rho,'ticks',A.ticks);	
+			[a,b] = size(obj.grid.lon_rho);
+			for i = 1:A.dx:a
+				for j = 1:A.dy:b
+					m_plot(obj.grid.lon_rho(i,:),obj.grid.lat_rho(i,:),'r');
+					hold on
+					m_plot(obj.grid.lon_rho(:,j),obj.grid.lat_rho(:,j),'b');
+					m_text(obj.grid.lon_rho(i,end),obj.grid.lat_rho(i,end),num2str(i),'fontsize',8);
+					m_text(obj.grid.lon_rho(end,j),obj.grid.lat_rho(end,j),num2str(j),'fontsize',8);
+				end
+			end
+
+			fname = [obj.info.sim,'_grid'];
+			print('-djpeg',[obj.paths.simPath,fname]);
+			close all
+
+			% Optional plot of region
+			if ~isempty(obj.region)
+				fig = piofigs('lfig',1.5);
+				[ax] = map_plot(fig,obj.grid.lon_rho,obj.grid.lat_rho,'ticks',A.ticks);
+				hold on
+				m_contourf(obj.region.lon_rho,obj.region.lat_rho,obj.region.mask_rho);
+				fname = [obj.info.sim,'_region'];
+				print('-djpeg',[obj.paths.simPath,fname]);
+				close all
+			end
+
+		end % end method gridView
+
                 function obj = defineRegion(obj,varargin)
                         % ----------------------
                         % - Defines a subregion for budget.
-                        % - This will reduce created matrices to a smaller grid
+                        % - This will reduce data to a smaller grid
                         % - Allowing the user to define their region to conduct
                         % - a budget analysis.
                         %
@@ -251,11 +307,10 @@ classdef romsMaster
                         % - Inputs:
                         %   lon_lim - x-grid indices (i.e. [200 400]) 
                         %   lat_lim - y-grid indices (i.e. [200 400])
-                        %   create  - make plot and pick lat/lon indices yourself (1 == yes)
-                        %
+			%   dep_lim - z-grid depth limits (i.e. [-600 0]) for 0 - 600m
                         %
                         % - Example:
-                        %   obj = defineRegion(obj,'lon_lim',[200 400],'lat_lim',[200 400])
+                        %   obj = defineRegion(obj,'lon_lim',[200 400],'lat_lim',[200 400],'dep_lim',[-600 0])
                         %   or simply...
                         %   obj = defineRegion(obj)
                         %   ...to define the region yourself
@@ -269,7 +324,7 @@ classdef romsMaster
                         % Toggles
                         A.lon_lim = [];
                         A.lat_lim = [];
-                        A.create  = [0];
+			A.dep_lim = [];
                         A         = parse_pv_pairs(A,varargin);
 
                         % Initialize?
@@ -277,86 +332,46 @@ classdef romsMaster
                                 obj = initBudg(obj);
                         end
 
-                        % Skip this routine if region has been defined
-                        if ~isempty(A.lon_lim) & ~isempty(A.lat_lim)
-                                obj.region.lon_lim   = [A.lon_lim];
-                                obj.region.lat_lim   = [A.lat_lim];
-                                disp('...region is defined...');
-                                x = 1;
-                        elseif A.create == 0
-                                obj.region.lon_lim   = [1 obj.grid.nx];
-                                obj.region.lat_lim   = [1 obj.grid.ny];
-                                disp('...using entire simulation...');
-                                x = 0;
-                        end
-
-                        % If defining region, make a figure
-                        if x == 1
-                                % Plot lon/lat lines
-                                fig = piofigs('lfig',1.5);
-                                [a,b] = size(obj.grid.lon_rho);
-                                for i = 1:20:a
-                                        for j = 1:20:b
-                                                plot(obj.grid.lon_rho(i,:),obj.grid.lat_rho(i,:),'r');
-                                                hold on
-                                                plot(obj.grid.lon_rho(:,j),obj.grid.lat_rho(:,j),'b');
-                                                text(obj.grid.lon_rho(i,end),obj.grid.lat_rho(i,end),num2str(i),'fontsize',8);
-                                                text(obj.grid.lon_rho(end,j),obj.grid.lat_rho(end,j),num2str(j),'fontsize',8);
-                                        end
-                                end
-                                plot_coast
-                                drawnow
-                                disp('Making temporary figure in /data/project1/demccoy/tmpfigs/');
-                                pltjpg;
-                                disp('...pausing, check now'); pause
-                                for i = 1:10
-                                        lon_lim = []; lat_lim = [];
-                                        [lon_lim] = input('Longitude limits? [min max]: ');
-                                        [lat_lim] = input('Latitude limits? [min max]: ');
-                                        l1 = plot(obj.grid.lon_rho(lon_lim(1),lat_lim(1):lat_lim(end)),...
-                                                  obj.grid.lat_rho(lon_lim(1),lat_lim(1):lat_lim(end)),'k','linewidth',3);
-                                        l2 = plot(obj.grid.lon_rho(lon_lim(2),lat_lim(1):lat_lim(end)),...
-                                                  obj.grid.lat_rho(lon_lim(2),lat_lim(1):lat_lim(end)),'k','linewidth',3);
-                                        l3 = plot(obj.grid.lon_rho(lon_lim(1):lon_lim(end),lat_lim(1)),...
-                                                  obj.grid.lat_rho(lon_lim(1):lon_lim(end),lat_lim(1)),'k','linewidth',3);
-                                        l4 = plot(obj.grid.lon_rho(lon_lim(1):lon_lim(end),lat_lim(2)),...
-                                                  obj.grid.lat_rho(lon_lim(1):lon_lim(end),lat_lim(2)),'k','linewidth',3);
-                                        pltjpg
-                                        q  = input('Inspect now. OK(1) ReDo(*)');
-                                        if q == 1
-                                                break
-                                        else
-                                                delete(l1); delete(l2); delete(l3); delete(l4);
-                                                continue
-                                        end
-                                end
-                                obj.region.lon_lim = [lon_lim];
-                                obj.region.lat_lim = [lat_lim];
-                        end
+                        % Process inputs
+			if ~isempty(A.lon_lim)
+                                obj.region.lon_lim = [A.lon_lim];
+			else
+				obj.region.lon_lim = [1 obj.grid.nx];
+			end
+                        if ~isempty(A.lat_lim)
+                                obj.region.lat_lim = [A.lat_lim];
+			else
+				obj.region.lat_lim = [1 obj.grid.ny];
+			end
+			if ~isempty(A.dep_lim)
+				obj.region.dep_lim = [A.dep_lim];
+			else
+				obj.region.dep_lim = [-inf inf];
+			end
 
                         % Save region
-                        obj.region.lon_rho    = double(ncread(obj.paths.grid,'lon_rho',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
-                        obj.region.lat_rho    = double(ncread(obj.paths.grid,'lat_rho',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
-                        obj.region.lon_psi    = double(ncread(obj.paths.grid,'lon_psi',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
-                        obj.region.lat_psi    = double(ncread(obj.paths.grid,'lat_psi',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
-                        obj.region.pm         = double(ncread(obj.paths.grid,'pm',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
-                        obj.region.pn         = double(ncread(obj.paths.grid,'pn',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
-                        obj.region.angle      = double(ncread(obj.paths.grid,'angle',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.lon_rho    = double(ncread(obj.paths.grid,'lon_rho', [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.lat_rho    = double(ncread(obj.paths.grid,'lat_rho', [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.lon_psi    = double(ncread(obj.paths.grid,'lon_psi', [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
+                        obj.region.lat_psi    = double(ncread(obj.paths.grid,'lat_psi', [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
+                        obj.region.pm         = double(ncread(obj.paths.grid,'pm',      [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.pn         = double(ncread(obj.paths.grid,'pn',      [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.angle      = double(ncread(obj.paths.grid,'angle',   [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
                         obj.region.mask_rho   = double(ncread(obj.paths.grid,'mask_rho',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
-                        obj.region.mask_u     = double(ncread(obj.paths.grid,'mask_u',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
-                        obj.region.mask_v     = double(ncread(obj.paths.grid,'mask_v',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
-                        obj.region.h          = double(ncread(obj.paths.grid,'h',[obj.region.lon_lim(1) obj.region.lat_lim(1)],...
-                                                                                    [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
+                        obj.region.mask_u     = double(ncread(obj.paths.grid,'mask_u',  [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
+                        obj.region.mask_v     = double(ncread(obj.paths.grid,'mask_v',  [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim) diff(obj.region.lat_lim)]));
+                        obj.region.h          = double(ncread(obj.paths.grid,'h',       [obj.region.lon_lim(1) obj.region.lat_lim(1)],...
+                                                                                        [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1]));
                         obj.region.grid_area  = (1./(obj.region.pm .* obj.region.pn));
                         obj.region.z_r        = obj.grid.z_r(obj.region.lon_lim(1):obj.region.lon_lim(2),...
                                                              obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
@@ -377,8 +392,21 @@ classdef romsMaster
 
                         % Make 3D grid_area
                         for z = 1:obj.grid.nz
-                                obj.region.mask_rho3d(:,:,z) = obj.region.mask_rho;
-                                obj.region.area3d(:,:,z)     = obj.region.grid_area;
+				% Grab temporary mask/area
+				tmp_mask = obj.region.mask_rho;
+				tmp_area = obj.region.grid_area;
+				% Apply dep limits?
+				if isempty(A.dep_lim)
+					obj.region.mask_rho3d(:,:,z) = obj.region.mask_rho;
+					obj.region.area3d(:,:,z)     = obj.region.grid_area;
+				else
+					tmp_mask(obj.region.z_r(:,:,z)<A.dep_lim(1)) = NaN;
+					tmp_mask(obj.region.z_r(:,:,z)>A.dep_lim(2)) = NaN;
+					tmp_area(obj.region.z_r(:,:,z)<A.dep_lim(1)) = NaN;
+					tmp_area(obj.region.z_r(:,:,z)>A.dep_lim(2)) = NaN;
+					obj.region.mask_rho3d(:,:,z) = tmp_mask;
+					obj.region.area3d(:,:,z)     = tmp_area;
+				end
                         end
                 end % end method defineRegion
 
@@ -392,40 +420,49 @@ classdef romsMaster
                         % - Usage:
                         %   obj = getBudg(obj,varargin)
                         %
-                        % - Inputs:
-                        %   freq     - daily (0), monthly (1), yearly (2)
+                        % - Required Inputs:
                         %   varname  - 'N','NO3','NH4','O','C' for different budgets
-                        %   R_nc     - N:C Redfield ratio (0.137 == 16/116)
-                        %   timeplot - (optional) plot the relevant integrated budget terms for a time or times
+			%
+			% - Optional Inputs
+                        %   R_nc     - N:C Redfield ratio (default is 0.137 == 16/116)
+                        %   timeplot - plot the relevant integrated budget terms for a timestep(s)
+			%   dep_lim  - depth limits of budget
+			%   lon_lim  - limits of budget (lon indicies) for defineRegion
+			%   lat_lim  - limits of budget (lat indicies) for defineRegion
                         %
                         % - Example:
-                        %   obj = getBudg(obj,'freq',0,'varname','N2O','timeplot',[1:obj.region.nt])
+                        %   obj = getBudg(obj,'varname','N2O','lon_lim',[201 401],'lat_lim',[201 401],'dep_lim',[-600 inf]'timeplot',[1:obj.region.nt])
 			%
-			%   This will grab terms (concentrations, rates, fluxes) and calculate advection/dcdt/sms.
+			%   This will define a region from (201-401, 201-401) on the grid, with budgets calculated between 0 - 600m
+			%   It will grab terms (concentrations, rates, fluxes) and calculate advection/dcdt/sms
 			%   The 'timeplot' argument will also produce plots for each time-entry
-                        %
-                        % - Defaults:
-                        %   freq     = 0
-                        %   varname  = 'N2O'
-                        %   R_nc     = 0.137
-			%   timeplot = [];
                         % --------------------
 
                         disp('---------------------------------');
                         disp('Get parameters');
 
+                        % - Toggles
+                        A.varname  = [];
+                        A.R_nc     = [0.137];
+			A.timeplot = [];
+			A.dep_lim  = [];
+			A.lon_lim  = [];
+			A.lat_lim  = [];
+                        A          = parse_pv_pairs(A,varargin);
+
+			% Check inputs
+			if isempty(A.varname)
+				disp('varname must be defined, see romsMaster.getBudg')
+				return
+			end
+
                         % Initialize?
                         if isempty(obj.grid)
                         	disp('Initialize routine first (init)')
-			elseif isempty(obj.region)
-				obj = defineRegion(obj);
+				return
+			elseif isempty(obj.region) | ~isempty(A.lon_lim) | ~isempty(A.lat_lim) | ~isempty(A.dep_lim) 
+				obj = defineRegion(obj,'lon_lim',A.lon_lim,'lat_lim',A.lat_lim,'dep_lim',A.dep_lim);
 			end
-
-                        % - Toggles
-                        A.varname  = ['N2O'];
-                        A.R_nc     = 0.137;
-			A.timeplot = [];
-                        A          = parse_pv_pairs(A,varargin);
 
                         % Get frequency,varname
                         obj.budget.varname     = A.varname;
@@ -657,17 +694,14 @@ classdef romsMaster
 			% - Compute dt according to output frequency
 			dt         = dt*navg;
 
-			% - Get reduced 'h' (bathymetry)
-			tmph       = obj.region.h; 
-
 			% - Calculate dzdt
 			avg_z = double(ncread(obj.paths.avg,'z_w',...
 				[obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1],...
 				[diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1 inf inf]));
 			
 			% - Save levels
-			obj.budget.dzdt.dz  = diff(avg_z,1,3);
-			obj.budget.dzdt.dt   = dt;
+			obj.budget.dzdt.dz = diff(avg_z,1,3);
+			obj.budget.dzdt.dt = dt;
 		end % end methods computeDzDt
 
 		function obj = computeDcDt(obj)
@@ -834,7 +868,7 @@ classdef romsMaster
 							       obj.romsData.N2O_ATM.dfz   + obj.romsData.N2O_SIDEN.dfz;
 			end
 
-		end % end methods computeXYFlux
+		end % end methods computeXYZFlux
 
 		function obj = computeSMS(obj)
 			% ---------------------
@@ -1199,8 +1233,9 @@ classdef romsMaster
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax,cb] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
+					cb   = colorbar;
 					title([vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
@@ -1309,8 +1344,9 @@ classdef romsMaster
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax,cb] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
+					cb   = colorbar;
 					title([vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
@@ -1440,8 +1476,9 @@ classdef romsMaster
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax,cb] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
+					cb   = colorbar;
 					title([vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
@@ -1544,8 +1581,9 @@ classdef romsMaster
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax,cb] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
+					cb   = colorbar;
 					title([vars{i}],'Interpreter','none');
 					ylabel(cb,units{i})
 					caxis([clevs(1) clevs(end)]);
@@ -1718,12 +1756,13 @@ classdef romsMaster
 						
 						% Plot results
 						if t == 1
-							[ax,cb] = map_plot(fig,obj.grid.lon_rho,obj.grid.lat_rho);
+							[ax] = map_plot(fig,obj.grid.lon_rho,obj.grid.lat_rho);
 							clevs        	    = clevs(1):(diff(clevs)/31):clevs(2);
 							dat(dat<clevs(1))   = clevs(1);
 							dat(dat>clevs(end)) = clevs(end);
 							[tmp hc]            = m_contourf(obj.region.lon_rho,...
 									      obj.region.lat_rho,dat,clevs,'LineStyle','none');
+							cb = colorbar;
 							title(titstr,'Interpreter', 'none');
 							ylabel(cb,units,'FontSize',6)
 							caxis([clevs(1) clevs(end)]);
@@ -2126,22 +2165,6 @@ classdef romsMaster
 				end
 			end
 		end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	
 		function [obj] = initDiag(obj);	
         		% -------------------
@@ -3081,8 +3104,9 @@ classdef romsMaster
 						% - initiate figure
 						fig(i,j,k)            = piofigs('mfig',1);
 						set(0,'CurrentFigure',fig(i,j,k));
-						[ax(i,j,k),cb(i,j,k)] = map_plot(fig(i,j,k),obj.region.lon_rho,obj.region.lat_rho);
+						[ax(i,j,k)] = map_plot(fig(i,j,k),obj.region.lon_rho,obj.region.lat_rho);
 						m_contourf(obj.region.lon_rho,obj.region.lat_rho,data,lvls,'LineStyle','none');
+						cb(i,j,k)   = colorbar;
 						title([tstr{k},' ',obj.romsData.(A.vars{i}).name,' @ ',zstr{j}]);
 						ylabel(cb(i,j,k),obj.romsData.(A.vars{i}).units);
 	
