@@ -245,6 +245,10 @@ classdef romsMaster
 			obj.region.lat_lim = rlati;
 			obj.region.lon_lim = rloni;
 			obj.region.dep_lim = rdepi;
+
+			% - Grab subregion
+			obj = defineRegion(obj);
+
 		end % end methods init
 
 		%--------------------------------------------------------------------------------
@@ -287,7 +291,7 @@ classdef romsMaster
 			print('-djpeg',[obj.paths.simPath,fname]);
 
 			% Optional plot of region
-			if ~isempty(obj.region)
+			if ~isempty(obj.region.lon_rho)
 				% Generate whole map
 				fig(2)  = piofigs('lfig',1.5);
 				set(0,'CurrentFigure',fig(2));
@@ -403,7 +407,7 @@ classdef romsMaster
 				plotFluxes(obj,'time',A.timeplot);
 				plotRates(obj,'time',A.timeplot);
 				plotBudg(obj,'time',A.timeplot);
-				plotDecomp(obj,'time',A.timeplot);	 
+				%plotDecomp(obj,'time',A.timeplot); dont need this, decomp works now	 
 			end
 		end % end method getBudg
 
@@ -645,10 +649,12 @@ classdef romsMaster
 
 			% Add additional rates here
 			if ismember('DIAT_NO3_UPTAKE',vars) & ismember('DIAZ_NO3_UPTAKE',vars) & ismember('SP_NO3_UPTAKE',vars)
-				obj.romsData.photo_NO3.data = obj.romsData.DIAT_NO3_UPTAKE.data + obj.romsData.DIAZ_NO3_UPTAKE.data + obj.romsData.SP_NO3_UPTAKE.data;
+				obj.romsData.photo_NO3.data = obj.romsData.DIAT_NO3_UPTAKE.data + obj.romsData.DIAZ_NO3_UPTAKE.data + ...
+							      obj.romsData.SP_NO3_UPTAKE.data;
 			end
 			if ismember('DIAT_NO2_UPTAKE',vars) & ismember('DIAZ_NO2_UPTAKE',vars) & ismember('SP_NO2_UPTAKE',vars)
-				obj.romsData.photo_NO2.data = obj.romsData.DIAT_NO2_UPTAKE.data + obj.romsData.DIAZ_NO2_UPTAKE.data + obj.romsData.SP_NO2_UPTAKE.data;
+				obj.romsData.photo_NO2.data = obj.romsData.DIAT_NO2_UPTAKE.data + obj.romsData.DIAZ_NO2_UPTAKE.data + ...
+							      obj.romsData.SP_NO2_UPTAKE.data;
 			end
 
 			% Optional decomp
@@ -699,15 +705,20 @@ classdef romsMaster
 			% Load fluxes, restrict to region
 			obj = loadData(obj,'vars',vars,'type','raw');
 
-			% Apply 3D mask
+			% Apply mask
 			for i = 1:length(vars)
+				% Regular data
 				obj.romsData.(vars{i}).data = obj.romsData.(vars{i}).data .* obj.region.mask_rho;
+				% Copy for budget, for consistency with integrated terms
+				vname = vars{i}(4:end);
+				obj.romsData.(vname).intfg = obj.romsData.(vars{i}).data;
 			end	
 
 			% Optional decomp
 			if strcmp(obj.budget.varname,'N2O_decomp');
 				obj.romsData.FG_N2O_DECOMP.data = obj.romsData.FG_N2O_SODEN.data + obj.romsData.FG_N2O_AO1.data + ...
 							          obj.romsData.FG_N2O_ATM.data   + obj.romsData.FG_N2O_SIDEN.data;
+				obj.romsData.N2O_DECOMP.intfg   = obj.romsData.FG_N2O_DECOMP.data;
 			end
 
 		end % end method getFluxes
@@ -995,54 +1006,28 @@ classdef romsMaster
 				end
 
 				% Nitrous Oxide (basic)
-				% SMS = N2OAMMOX + DENITRIF2 - DENITRIF3 + FG_N2O
+				% SMS = N2OAMMOX + DENITRIF2 - DENITRIF3
 				if strcmp('N2O',vars{v})
-					% Make FG_N2O 3D
-					tmpatm           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm(:,:,42,:) = obj.romsData.FG_N2O.data; % Input at surface
-					tmpatm           = tmpatm ./ obj.budget.dzdt.dz; % Convert to mmol/m3/s
 					% Get SMS
-					obj.romsData.N2O.sms  = obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2 + tmpatm - ...
-							        obj.romsData.DENITRIF3.data;  				              ...
+					obj.romsData.N2O.sms  = obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
+							        obj.romsData.DENITRIF3.data;  				       
 					% Apply 3D mask
 					obj.romsData.N2O.sms  = obj.romsData.N2O.sms .* obj.region.mask_rho3d;
 				end
 
-				% Nitrous Oxide (full)
-				% SMS = (N2OAMMOX - N2OAO1_CONS) + (DENITRIF2 - N2OSODEN_CONS) + FG_N2O
+				% Nitrous Oxide (decomp)
 				if strcmp('N2O_decomp',vars{v})
-					% Make FG_N2O 3D
-					tmpatm0           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm0(:,:,42,:) = obj.romsData.FG_N2O.data;        % Input at surface
-					tmpatm0           = tmpatm0 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					tmpatm1           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm1(:,:,42,:) = obj.romsData.FG_N2O_AO1.data;    % Input at surface
-					tmpatm1           = tmpatm1 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					tmpatm2           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm2(:,:,42,:) = obj.romsData.FG_N2O_ATM.data;    % Input at surface
-					tmpatm2           = tmpatm2 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					tmpatm3           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm3(:,:,42,:) = obj.romsData.FG_N2O_SIDEN.data;  % Input at surface
-					tmpatm3           = tmpatm3 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					tmpatm4           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm4(:,:,42,:) = obj.romsData.FG_N2O_SODEN.data;  % Input at surface
-					tmpatm4           = tmpatm4 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					tmpatm5           = zeros(size(obj.romsData.DENITRIF2.data));
-					tmpatm5(:,:,42,:) = obj.romsData.FG_N2O_DECOMP.data; % Input at surface
-					tmpatm5           = tmpatm5 ./ obj.budget.dzdt.dz;  % Convert to mmol/m3/s
-					% Get SMS
-					obj.romsData.N2O.sms        = obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2 + tmpatm0 - ...
-							     	      obj.romsData.DENITRIF3.data .* obj.region.mask_rho3d;  		
-					obj.romsData.N2O_AO1.sms    = obj.romsData.N2OAMMOX.data + tmpatm1 - ...   	
-						             	      obj.romsData.N2OAO1_CONS.data .* obj.region.mask_rho3d;    			
-					obj.romsData.N2O_ATM.sms    = tmpatm2 - ...              				 
-							     	      obj.romsData.N2OATM_CONS.data .* obj.region.mask_rho3d;     			       
-					obj.romsData.N2O_SIDEN.sms  = tmpatm3 - ...              			                
-							     	      obj.romsData.N2OSIDEN_CONS.data .* obj.region.mask_rho3d;   			         
-					obj.romsData.N2O_SODEN.sms  = obj.romsData.DENITRIF2.data./2 + tmpatm4 - ...                      
-							     	      obj.romsData.N2OSODEN_CONS.data .* obj.region.mask_rho3d;					 	
-					obj.romsData.N2O_DECOMP.sms = obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2 + tmpatm5 - ...
-							              obj.romsData.DENITRIF3_DECOMP.data .* obj.region.mask_rho3d;  			         	 
+					% Get SMS, apply mask
+					obj.romsData.N2O.sms        = [obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
+							     	       obj.romsData.DENITRIF3.data] .* obj.region.mask_rho3d;  		
+					obj.romsData.N2O_AO1.sms    = [obj.romsData.N2OAMMOX.data  - ...   	
+						             	       obj.romsData.N2OAO1_CONS.data] .* obj.region.mask_rho3d;    
+					obj.romsData.N2O_ATM.sms    = [-obj.romsData.N2OATM_CONS.data] .* obj.region.mask_rho3d;
+					obj.romsData.N2O_SIDEN.sms  = [-obj.romsData.N2OSIDEN_CONS.data] .* obj.region.mask_rho3d;
+					obj.romsData.N2O_SODEN.sms  = [obj.romsData.DENITRIF2.data./2  - ...                      
+							     	       obj.romsData.N2OSODEN_CONS.data] .* obj.region.mask_rho3d;					 	
+					obj.romsData.N2O_DECOMP.sms = [obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
+							               obj.romsData.DENITRIF3_DECOMP.data] .* obj.region.mask_rho3d;  			         	 
 				end
 	
 				% Oxygen
@@ -1191,7 +1176,7 @@ classdef romsMaster
 				dfz  = obj.romsData.(vars{i}).dfz .* obj.region.mask_rho3d;
 				sms  = obj.romsData.(vars{i}).sms .* obj.region.mask_rho3d;
 				
-				% Integrate vertically
+				% Integrate vertically (fg terms already calculated)
 				% ...mmol/m3/s to mmol/m2/s
 				obj.romsData.(vars{i}).intdcdt = squeeze(nansum(dcdt.*obj.budget.dzdt.dz,3));
 				obj.romsData.(vars{i}).intadx  = squeeze(nansum(adx .*obj.budget.dzdt.dz,3)); 
@@ -1207,6 +1192,11 @@ classdef romsMaster
 				obj.romsData.(vars{i}).totadz   = nansum(obj.romsData.(vars{i}).intadz .*obj.region.grid_area,'all'); 
 				obj.romsData.(vars{i}).totdfz   = nansum(obj.romsData.(vars{i}).intdfz .*obj.region.grid_area,'all'); 
 				obj.romsData.(vars{i}).totsms   = nansum(obj.romsData.(vars{i}).intsms .*obj.region.grid_area,'all'); 
+				try
+					obj.romsData.(vars{i}).totfg = nansum(obj.romsData.(vars{i}).intfg .*obj.region.grid_area,'all');
+				catch
+					obj.romsData.(vars{i}).totfg = NaN;
+				end
 			end
 		end
 
@@ -1301,24 +1291,25 @@ classdef romsMaster
 					% Plot
 					fig     = piofigs('mfig',1); set(0,'currentfigure',fig);
 					if strcmp(obj.info.time_string,'Monthly')
-						fname = [vars{i},'_',obj.info.Ext,'_M',num2str(tt)];
+						fname = [vars{i},'_M',num2str(tt)];
 					elseif strcmp(obj.info.time_string,'Daily');
-						fname = [vars{i},'_',obj.info.Ext,'_D',num2str(tt)];
+						fname = [vars{i},'_D',num2str(tt)];
 					end
 					clevs   = cbar.tmpdata;
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.region.lon_rho,obj.region.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
 					cb   = colorbar;
-					title([vars{i}],'Interpreter','none');
+					title(['Integrated ',vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
 					colormap(gca,cmocean('amp'));
 					ax.FontSize = 10;
 					cb.FontSize = 10;
-					print('-djpeg',[obj.paths.plots.budget,fname]);
+					%print('-djpeg',[obj.paths.plots.budget,fname]);
+					export_fig('-jpg',[obj.paths.plots.budget,fname]);
 					close(fig)
 				end
 			end			
@@ -1327,7 +1318,7 @@ classdef romsMaster
 		%--------------------------------------------------------------------------------
 		function plotFluxes(obj,varargin)
 			% ------------------
-			% - Plot the integrated rates
+			% - Plot the air-sea fluxes
 			% - Called in getBudg
 			%
 			% - Inputs:
@@ -1406,7 +1397,7 @@ classdef romsMaster
 					tt = A.time(t);
 
 					% Gather data
-					tmpdata = obj.romsData.(vars{i}).int(:,:,tt); % mmol/m2/s
+					tmpdata = obj.romsData.(vars{i}).data(:,:,tt); % mmol/m2/s
 					
 					% Blank land
 					tmpdata = tmpdata .* obj.region.mask_rho;
@@ -1414,24 +1405,25 @@ classdef romsMaster
 					% Plot
 					fig     = piofigs('mfig',1); set(0,'currentfigure',fig);
 					if strcmp(obj.info.time_string,'Monthly')
-						fname = [vars{i},'_',obj.info.Ext,'_M',num2str(tt)];
+						fname = [vars{i},'_M',num2str(tt)];
 					elseif strcmp(obj.info.time_string,'Daily');
-						fname = [vars{i},'_',obj.info.Ext,'_D',num2str(tt)];
+						fname = [vars{i},'_D',num2str(tt)];
 					end
 					clevs   = cbar.tmpdata;
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.region.lon_rho,obj.region.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
 					cb   = colorbar;
-					title([vars{i}],'Interpreter','none');
+					title(['Air-sea Flux: ',vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
 					colormap(gca,cmocean('balance'));
 					ax.FontSize = 10;
 					cb.FontSize = 10;
-					print('-djpeg',[obj.paths.plots.budget,fname]);
+					%print('-djpeg',[obj.paths.plots.budget,fname]);
+					export_fig('-jpg',[obj.paths.plots.budget,fname]);
 					close(fig)
 				end
 			end			
@@ -1487,8 +1479,6 @@ classdef romsMaster
 				A.time = 1:1:obj.region.nt;
 			end
 
-			% Units
-			
 			% First generate uniform color bars for each axis	
 			% Go through each variables
 			for i = 1:length(vars)
@@ -1548,24 +1538,25 @@ classdef romsMaster
 					% Plot
 					fig     = piofigs('mfig',1); set(0,'currentfigure',fig);
 					if strcmp(obj.info.time_string,'Monthly')
-						fname = [vars{i},'_',obj.info.Ext,'_M',num2str(tt)];
+						fname = [vars{i},'_M',num2str(tt)];
 					elseif strcmp(obj.info.time_string,'Daily');
-						fname = [vars{i},'_',obj.info.Ext,'_D',num2str(tt)];
+						fname = [vars{i},'_D',num2str(tt)];
 					end
 					clevs   = cbar.tmpdata;
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.region.lon_rho,obj.region.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
 					cb   = colorbar;
-					title([vars{i}],'Interpreter','none');
+					title(['Integrated ',vars{i}],'Interpreter','none');
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
 					colormap(gca,cmocean('balance'));
 					ax.FontSize = 10;
 					cb.FontSize = 10;
-					print('-djpeg',[obj.paths.plots.budget,fname]);
+					%print('-djpeg',[obj.paths.plots.budget,fname]);
+					export_fig('-jpg',[obj.paths.plots.budget,fname]);
 					close(fig)
 				end
 			end			
@@ -1663,7 +1654,7 @@ classdef romsMaster
 					clevs   = clevs(1):(diff(clevs)/31):clevs(2);
 					tmpdata(tmpdata<clevs(1))   = clevs(1);
 					tmpdata(tmpdata>clevs(end)) = clevs(end);		
-					[ax] = map_plot(fig(1),obj.grid.lon_rho,obj.grid.lat_rho);
+					[ax] = map_plot(fig(1),obj.region.lon_rho,obj.region.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
 					cb   = colorbar;
 					title([vars{i}],'Interpreter','none');
@@ -1672,7 +1663,8 @@ classdef romsMaster
 					colormap(gca,cmocean('balance'));
 					ax.FontSize = 10;
 					cb.FontSize = 10;
-					print('-djpeg',[obj.paths.plots.budget,fname]);
+					%print('-djpeg',[obj.paths.plots.budget,fname]);
+					export_fig('-jpg',[obj.paths.plots.budget,fname]);
 					close(fig)
 				end
 			end			
@@ -1744,12 +1736,20 @@ classdef romsMaster
 					       obj.romsData.(vars{i}).intadz(:,:,tt);
 					dfz  = obj.romsData.(vars{i}).intdfz(:,:,tt);
 					sms  = obj.romsData.(vars{i}).intsms(:,:,tt);
+					
+					% Check for air-sea flux
+					try
+						fg = obj.romsData.(vars{i}).intfg(:,:,tt);
+					catch
+						fg = nan(size(obj.region.mask_rho));
+					end
 				
 					% Blank land
 					dcdt = dcdt .* obj.region.mask_rho;
 					adv  = adv  .* obj.region.mask_rho;
 					dfz  = dfz  .* obj.region.mask_rho;
 					sms  = sms  .* obj.region.mask_rho;
+					fg   = fg   .* obj.region.mask_rho;
 
 					% Get colobars
 					cbar_net  = prclims([dcdt - (adv + dfz + sms)],'prc',A.prc);
@@ -1757,12 +1757,14 @@ classdef romsMaster
 					cbar_adv  = prclims(adv,'prc',A.prc);
 					cbar_dfz  = prclims(dfz,'prc',A.prc);
 					cbar_sms  = prclims(sms,'prc',A.prc);
+					cbar_fg   = prclims(sms,'prc',A.prc);
 					if t == 1
 						cbar.net  = cbar_net;
 						cbar.dcdt = cbar_dcdt;
 						cbar.adv  = cbar_adv;
 						cbar.dfz  = cbar_dfz;
 						cbar.sms  = cbar_sms;
+						cbar.fg   = cbar_fg;
 					end
 					
 					% Update colorbars?
@@ -1781,6 +1783,9 @@ classdef romsMaster
 					if max(cbar_sms) > max(cbar.sms);
 						cbar.sms = cbar_sms;
 					end
+					if max(cbar_fg)  > max(cbar.fg);
+						cbar.fg  = cbar_fg;
+					end
 				end
 
 				% Go through each time-record (or dont, based on input)
@@ -1795,74 +1800,79 @@ classdef romsMaster
 					dfz  = obj.romsData.(vars{i}).intdfz(:,:,tt);
 					sms  = obj.romsData.(vars{i}).intsms(:,:,tt);
 
+					% Check for air-sea flux
+					try
+						fg = obj.romsData.(vars{i}).intfg(:,:,tt);
+					catch
+						fg = nan(size(obj.region.mask_rho));
+					end
+
                                         % Blank land
 					dcdt = dcdt .* obj.region.mask_rho;
 					adv  = adv  .* obj.region.mask_rho;
 					dfz  = dfz  .* obj.region.mask_rho;
 					sms  = sms  .* obj.region.mask_rho;
+					fg   = fg   .* obj.region.mask_rho;
 					
 					% Start plots
-					for j = 1:5
+					for j = 1:6
 				
 						% Initiate map figure
 						fig = piofigs('mfig',1);
 						if j == 1
 							dat    = dcdt;
-							titstr = [vars{i},': change over time'];
+							titstr = ['Integrated ',vars{i},': change over time'];
 							fstr   = ['dcdt'];
-							pltc   = [152];
 							clevs  = cbar.dcdt;
 						elseif j == 2
 							dat    = adv;
-							titstr = [vars{i},': advection'];
+							titstr = ['Integrated ',vars{i},': advection'];
 							fstr   = ['adv'];
-							pltc   = [153];
 							clevs  = cbar.adv;
 						elseif j == 3
 							dat    = dfz;
-							titstr = [vars{i},': diffusion'];
+							titstr = ['Integrated ',vars{i},': diffusion'];
 							fstr   = ['diff'];
-							pltc   = [154];
 							clevs  = cbar.dfz;
 						elseif j == 4
 							dat    = sms;
-							titstr = [vars{i},': sources-minus-sinks'];
+							titstr = ['Integrated ',vars{i},': sources-minus-sinks'];
 							fstr   = ['sms'];
-							pltc   = [155];
 							clevs  = cbar.sms;
 						elseif j == 5
-							dat    = dcdt - (adv + dfz + sms);
-							titstr = [vars{i},': net'];
+							dat    = fg;
+							titstr = ['Integrated ',vars{i},': air-sea flux'];
+							fstr   = ['fg'];
+							clevs  = cbar.fg;
+						elseif j == 6
+							dat    = dcdt - (adv + dfz + sms + fg);
+							titstr = ['Integrated ',vars{i},': net'];
 							fstr   = ['net'];
-							pltc   = [151];
 							clevs  = cbar.net;
 						end
 						
 						% Plot results
-						if t == 1
-							[ax] = map_plot(fig,obj.grid.lon_rho,obj.grid.lat_rho);
-							clevs        	    = clevs(1):(diff(clevs)/31):clevs(2);
-							dat(dat<clevs(1))   = clevs(1);
-							dat(dat>clevs(end)) = clevs(end);
-							[tmp hc]            = m_contourf(obj.region.lon_rho,...
-									      obj.region.lat_rho,dat,clevs,'LineStyle','none');
-							cb = colorbar;
-							title(titstr,'Interpreter', 'none');
-							ylabel(cb,units,'FontSize',6)
-							caxis([clevs(1) clevs(end)]);
-							colormap(gca,cmocean('balance'));
-							ax.FontSize = 10;
-							cb.FontSize = 10;
-						end
+						[ax] = map_plot(fig,obj.region.lon_rho,obj.region.lat_rho);
+						clevs        	    = clevs(1):(diff(clevs)/31):clevs(2);
+						dat(dat<clevs(1))   = clevs(1);
+						dat(dat>clevs(end)) = clevs(end);
+						[tmp hc]            = m_contourf(obj.region.lon_rho,...
+								      obj.region.lat_rho,dat,clevs,'LineStyle','none');
+						cb = colorbar;
+						title(titstr,'Interpreter', 'none');
+						ylabel(cb,units,'FontSize',6)
+						caxis([clevs(1) clevs(end)]);
+						colormap(gca,cmocean('balance'));
+						ax.FontSize = 10;
+						cb.FontSize = 10;
 					
-						% Add title
-					
+						% Print	
 						if strcmp(obj.info.time_string,'Monthly')
-							fname = [vars{i},'_',fstr,'_',obj.info.Ext,'_M',num2str(tt)];
+							fname = [vars{i},'_',fstr,'_M',num2str(tt)];
 						elseif strcmp(obj.info.time_string,'Daily');
-							fname = [vars{i},'_',fstr,'_',obj.info.Ext,'_D',num2str(tt)];
+							fname = [vars{i},'_',fstr,'_D',num2str(tt)];
 						end
-						print('-djpeg',[obj.paths.plots.budget,fname]);
+						export_fig('-jpg',[obj.paths.plots.budget,fname]);
 						close(fig)	
 					end
 					
@@ -1897,20 +1907,22 @@ classdef romsMaster
 			% Convert mmol N/s to TgN/yr
 			mmolNps_to_TgNpy = (10^-3)*14*3600*24*365.25*(10^-12);
 
-			% Contributions from air-sea fluxes
+			% Grab decomposition results
 			for t = 1:obj.region.nt
-				airsea.atm(t) = nansum(obj.romsData.FG_N2O_ATM.data(:,:,t)   .* obj.region.grid_area,'all');
-				airsea.den(t) = nansum(obj.romsData.FG_N2O_SODEN.data(:,:,t) .* obj.region.grid_area,'all');
-				airsea.bou(t) = nansum(obj.romsData.FG_N2O_SIDEN.data(:,:,t) .* obj.region.grid_area,'all');
-				airsea.nit(t) = nansum(obj.romsData.FG_N2O_AO1.data(:,:,t)   .* obj.region.grid_area,'all');
-				produc.atm(t) = nansum(obj.romsData.N2O_ATM.intsms(:,:,t)    .* obj.region.grid_area,'all') - ...
-						airsea.atm(t);
-				produc.den(t) = nansum(obj.romsData.N2O_SODEN.intsms(:,:,t)  .* obj.region.grid_area,'all') - ...
-						airsea.den(t);
-				produc.bou(t) = nansum(obj.romsData.N2O_SIDEN.intsms(:,:,t)  .* obj.region.grid_area,'all') - ...
-						airsea.bou(t);
-				produc.nit(t) = nansum(obj.romsData.N2O_AO1.intsms(:,:,t)    .* obj.region.grid_area,'all') - ...
-						airsea.nit(t);
+				
+				% Air-sea fluxes
+				airsea.atm(t) = nansum(obj.romsData.N2O_ATM.intfg(:,:,t)     .* obj.region.grid_area,'all');
+				airsea.den(t) = nansum(obj.romsData.N2O_SODEN.intfg(:,:,t)   .* obj.region.grid_area,'all');
+				airsea.bou(t) = nansum(obj.romsData.N2O_SIDEN.intfg(:,:,t)   .* obj.region.grid_area,'all');
+				airsea.nit(t) = nansum(obj.romsData.N2O_AO1.intfg(:,:,t)     .* obj.region.grid_area,'all');
+				
+				% N2O production inside domain
+				produc.atm(t) = nansum(obj.romsData.N2O_ATM.intsms(:,:,t)    .* obj.region.grid_area,'all');
+				produc.den(t) = nansum(obj.romsData.N2O_SODEN.intsms(:,:,t)  .* obj.region.grid_area,'all');
+				produc.bou(t) = nansum(obj.romsData.N2O_SIDEN.intsms(:,:,t)  .* obj.region.grid_area,'all');
+				produc.nit(t) = nansum(obj.romsData.N2O_AO1.intsms(:,:,t)    .* obj.region.grid_area,'all');
+
+				% N2O advection into/outof domain
 				advect.atm(t) = nansum(obj.romsData.N2O_ATM.intadx(:,:,t)    .* obj.region.grid_area,'all') + ...
 						nansum(obj.romsData.N2O_ATM.intady(:,:,t)    .* obj.region.grid_area,'all') + ...
 						nansum(obj.romsData.N2O_ATM.intadz(:,:,t)    .* obj.region.grid_area,'all');
@@ -1923,6 +1935,18 @@ classdef romsMaster
 				advect.nit(t) = nansum(obj.romsData.N2O_AO1.intadx(:,:,t)    .* obj.region.grid_area,'all') + ...
 						nansum(obj.romsData.N2O_AO1.intady(:,:,t)    .* obj.region.grid_area,'all') + ...
 						nansum(obj.romsData.N2O_AO1.intadz(:,:,t)    .* obj.region.grid_area,'all');
+				
+				% N2O diffusion inside domain
+				diffus.atm(t) = nansum(obj.romsData.N2O_ATM.intdfz(:,:,t)    .* obj.region.grid_area,'all');
+				diffus.den(t) = nansum(obj.romsData.N2O_SODEN.intdfz(:,:,t)  .* obj.region.grid_area,'all');	
+				diffus.bou(t) = nansum(obj.romsData.N2O_SIDEN.intdfz(:,:,t)  .* obj.region.grid_area,'all');	
+				diffus.nit(t) = nansum(obj.romsData.N2O_AO1.intdfz(:,:,t)    .* obj.region.grid_area,'all');
+
+				% dCdt inside domain
+				dcdt.atm(t)   = nansum(obj.romsData.N2O_ATM.intdcdt(:,:,t)   .* obj.region.grid_area,'all');
+				dcdt.den(t)   = nansum(obj.romsData.N2O_SODEN.intdcdt(:,:,t) .* obj.region.grid_area,'all');	
+				dcdt.bou(t)   = nansum(obj.romsData.N2O_SIDEN.intdcdt(:,:,t) .* obj.region.grid_area,'all');	
+				dcdt.nit(t)   = nansum(obj.romsData.N2O_AO1.intdcdt(:,:,t)   .* obj.region.grid_area,'all');	
 			end
 
 			% Get stacked bars for airsea
@@ -1931,13 +1955,15 @@ classdef romsMaster
 			airsea.dat(:,2) = [airsea.den];
 			airsea.dat(:,3) = [airsea.bou];
 			airsea.dat(:,4) = [airsea.atm];
-
+			airsea.dat(:,5) = sum(airsea.dat,2);
+			
 			% Get stacked bars for produc
 			produc.dat      = [];
 			produc.dat(:,1) = [produc.nit];
 			produc.dat(:,2) = [produc.den];
 			produc.dat(:,3) = [produc.bou];
 			produc.dat(:,4) = [produc.atm];
+			produc.dat(:,5) = sum(produc.dat,2);
 			
 			% Get stacked bars for advect
 			advect.dat      = [];
@@ -1945,41 +1971,79 @@ classdef romsMaster
 			advect.dat(:,2) = [advect.den];
 			advect.dat(:,3) = [advect.bou];
 			advect.dat(:,4) = [advect.atm];
+			advect.dat(:,5) = sum(advect.dat,2);
+
+			% Get stacked bars for diffus
+			diffus.dat      = [];
+			diffus.dat(:,1) = [diffus.nit];
+			diffus.dat(:,2) = [diffus.den];
+			diffus.dat(:,3) = [diffus.bou];
+			diffus.dat(:,4) = [diffus.atm];
+			diffus.dat(:,5) = sum(diffus.dat,2);
+
+			% Get stacked bars for dcdt
+			dcdt.dat        = [];
+			dcdt.dat(:,1)   = [dcdt.nit];
+			dcdt.dat(:,2)   = [dcdt.den];
+			dcdt.dat(:,3)   = [dcdt.bou];
+			dcdt.dat(:,4)   = [dcdt.atm];
+			dcdt.dat(:,5)   = sum(dcdt.dat,2);
 
 			% Convert
+			% airsea
 			airsea.dat = airsea.dat .* mmolNps_to_TgNpy;
 			airsea.nit = airsea.nit .* mmolNps_to_TgNpy;
 			airsea.den = airsea.den .* mmolNps_to_TgNpy;
 			airsea.bou = airsea.bou .* mmolNps_to_TgNpy;
 			airsea.atm = airsea.atm .* mmolNps_to_TgNpy;
+			% produc
 			produc.dat = produc.dat .* mmolNps_to_TgNpy;
 			produc.nit = produc.nit .* mmolNps_to_TgNpy;
 			produc.den = produc.den .* mmolNps_to_TgNpy;
 			produc.bou = produc.bou .* mmolNps_to_TgNpy;
 			produc.atm = produc.atm .* mmolNps_to_TgNpy;
+			% advect
 			advect.dat = advect.dat .* mmolNps_to_TgNpy;
 			advect.nit = advect.nit .* mmolNps_to_TgNpy;
 			advect.den = advect.den .* mmolNps_to_TgNpy;
 			advect.bou = advect.bou .* mmolNps_to_TgNpy;
 			advect.atm = advect.atm .* mmolNps_to_TgNpy;
+			% diffus
+			diffus.dat = diffus.dat .* mmolNps_to_TgNpy;
+			diffus.nit = diffus.nit .* mmolNps_to_TgNpy;
+			diffus.den = diffus.den .* mmolNps_to_TgNpy;
+			diffus.bou = diffus.bou .* mmolNps_to_TgNpy;
+			diffus.atm = diffus.atm .* mmolNps_to_TgNpy;
+			% dcdt
+			dcdt.dat   = dcdt.dat   .* mmolNps_to_TgNpy;
+			dcdt.nit   = dcdt.nit   .* mmolNps_to_TgNpy;
+			dcdt.den   = dcdt.den   .* mmolNps_to_TgNpy;
+			dcdt.bou   = dcdt.bou   .* mmolNps_to_TgNpy;
+			dcdt.atm   = dcdt.atm   .* mmolNps_to_TgNpy;
 		
 			% Get annual results	
-			final(1,:) = mean(advect.dat,1);
-			final(2,:) = mean(produc.dat,1);
-			final(3,:) = mean(airsea.dat,1);
-
+			final(1,:) = mean(airsea.dat(:,1:4),1);
+			final(2,:) = mean(produc.dat(:,1:4),1);
+			final(3,:) = mean(advect.dat(:,1:4),1);
+			final(4,:) = mean(diffus.dat(:,1:4),1);
+			final(5,:) = mean(  dcdt.dat(:,1:4),1);
+			final(6,:) = final(5,:) - sum(final(1:4,:),1);
+			
 			% Plot airsea cumulative
 			fig(1) = piofigs('mfig',1);
-			b1 = bar(-airsea.dat,'stacked');
+			b1 = bar(-airsea.dat(:,1:4),'stacked');
 			for i = 1:4
 				b1(i).FaceColor = clrs(i,:);
 			end
-			title('Air-Sea Flux of N_2O');
 			ylabel('TgN/yr');
 			xlabel(xstr)
-			legend('Nitrif','Denitrif','Boundary','Atmos');
+			l = legend('Nitrif','Denitrif','Boundary','Atmos');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			suptitle('Air-Sea Flux of $N_2O$');
 			fname = ['n2o_airsea_results1'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all	
 			
 			% Plot airsea individual
@@ -1989,26 +2053,33 @@ classdef romsMaster
 			plot(1:obj.region.nt,-airsea.den,'color',clrs(2,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,-airsea.bou,'color',clrs(3,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,-airsea.atm,'color',clrs(4,:),'LineWidth',lnwd);
-			title('Air-Sea Flux of N_2O');
+			plot(1:obj.region.nt,-airsea.dat(:,5),'k','LineWidth',lnwd);
 			ylabel('TgN/yr');
 			xlabel(xstr)
-			legend('Nitrif','Denitrif','Boundary','Atmos');
+			l = legend('Nitrif','Denitrif','Boundary','Atmos','Net');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			suptitle('Air-Sea Flux of $N_2O$');
 			fname = ['n2o_airsea_results2'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all
 			
 			% Plot production cumulative
 			fig(1) = piofigs('mfig',1);
-			b2 = bar(produc.dat,'stacked');
+			b2 = bar(produc.dat(:,1:4),'stacked');
 			for i = 1:4
 				b2(i).FaceColor = clrs(i,:);
 			end	
-			title('Net N_2O from S-M-S');
 			ylabel('TgN/yr');
 			xlabel(xstr)
-			legend('Nitrif','Denitrif','Boundary','Atmos');
+			l = legend('Nitrif','Denitrif','Boundary','Atmos');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			suptitle('Net $N_2O$ from S-M-S');
 			fname = ['n2o_produc_results1'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all
 
 			% Plot produc individual
@@ -2018,26 +2089,33 @@ classdef romsMaster
 			plot(1:obj.region.nt,produc.den,'color',clrs(2,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,produc.bou,'color',clrs(3,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,produc.atm,'color',clrs(4,:),'LineWidth',lnwd);
-			legend('Nitrif','Denitrif','Boundary','Atmos');
-			title('Net N_2O from S-M-S');
+			plot(1:obj.region.nt,produc.dat(:,5),'k','linewidth',lnwd);
+			l = legend('Nitrif','Denitrif','Boundary','Atmos','Net');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			suptitle('Net $N_2O$ from S-M-S');
 			ylabel('TgN/yr');
 			xlabel(xstr)
 			fname = ['n2o_produc_results2'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all
 
 			% Plot advect cumulative
 			fig(1) = piofigs('mfig',1);
-			b1 = bar(advect.dat,'stacked');
+			b1 = bar(advect.dat(:,1:4),'stacked');
 			for i = 1:4
 				b1(i).FaceColor = clrs(i,:);
 			end
 			ylabel('TgN/yr');
 			xlabel(xstr)
-			legend('Nitrif','Denitrif','Boundary','Atmos');
-			title('Net Advection of N_2O');
+			l = legend('Nitrif','Denitrif','Boundary','Atmos');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			suptitle('Net Advection of $N_2O$');
 			fname = ['n2o_advect_results1'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all	
 
 			% Plot advect individual
@@ -2047,10 +2125,14 @@ classdef romsMaster
 			plot(1:obj.region.nt,advect.den,'color',clrs(2,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,advect.bou,'color',clrs(3,:),'LineWidth',lnwd);
 			plot(1:obj.region.nt,advect.atm,'color',clrs(4,:),'LineWidth',lnwd);
-			legend('Nitrif','Denitrif','Boundary','Atmos');
+			plot(1:obj.region.nt,advect.dat(:,5),'k','linewidth',lnwd);
+			l = legend('Nitrif','Denitrif','Boundary','Atmos','Net');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
 			ylabel('TgN/yr');
 			xlabel(xstr)
-			title('Net Advection of N_2O');
+			suptitle('Net Advection of $N_2O$');
 			fname = ['n2o_advect_results2'];
 			print('-djpeg',[obj.paths.plots.budget,fname]);
 			close all
@@ -2062,12 +2144,15 @@ classdef romsMaster
 				b1(i).FaceColor = clrs(i,:);
 			end
 			ylabel('TgN/yr');
-			legend('Nitrif','Denitrif','Boundary','Atmos');
-			set(gca,'XTickLabel',{'Advection','Production','Air-Sea'});	 
-			title('Fluxes of N_2O');
+			l = legend('Nitrif','Denitrif','Boundary','Atmos');
+			l.Box = 'off';
+			l.Location = 'northoutside';
+			l.Orientation = 'horizontal'; drawnow
+			set(gca,'XTickLabel',{'Air-sea','SMS','Advect','Diffus','dC/dt','Net'});	 
+			suptitle('$N_2O$ Budget Results');
 			ylabel('TgN/yr');
 			fname = ['n2o_final_fluxes'];
-			print('-djpeg',[obj.paths.plots.budget,fname]);
+			export_fig('-jpg',[obj.paths.plots.budget,fname]);
 			close all
 
 		end % end method plotN2Oresults
