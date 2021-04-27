@@ -343,7 +343,7 @@ classdef romsMaster
                         % - obj = getBudg(obj,varargin)
                         %
                         % Required Inputs:
-                        % - varname = 'N','NO3','NH4','O','C' for different budgets
+                        % - varname = 'NO2','NO3','NH4','N2O','N2O_decomp','N2' for different budgets
 			%
 			% Optional Inputs:
                         % - R_nc     = N:C Redfield ratio (default is 0.137 == 16/116)
@@ -359,6 +359,7 @@ classdef romsMaster
 			% NO2
 			% N2O
 			% N2O_decomp
+			% N2
                         % --------------------
 
                         disp('---------------------------------');
@@ -393,8 +394,6 @@ classdef romsMaster
                         obj.budget.param.sc_type = ['new2012'];
                         obj.budget.param.NZ      = obj.region.nz;
 
-			% Run budget scripts in order
-			obj = getBudg(obj,varname)
 			% Get dzdt terms
 			obj = computeDzDt(obj);
 			% Get dcdt terms
@@ -574,6 +573,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'N2O_decomp');
 				disp('...loading N2O (decomp)...');
 				vars = {'N2O','N2O_AO1','N2O_ATM','N2O_SIDEN','N2O_SODEN'};
+			elseif strcmp(obj.budget.varname,'N2');
+				disp('...loading N2...');
+				vars = {'N2','N2_SED'};
 			end
 
 			% Load
@@ -634,6 +636,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'NH4');
 				disp('...ammonium rates only...');
 				return
+			elseif strcmp(obj.budget.varname,'N2');
+				disp('...nitrogen gas rates only...');
+				vars = {'DENITRIF3','ANAMMOX'};
 			elseif strcmp(obj.budget.varname,'O2');
 				disp('...oxygen rates only...');
 				vars = {'O2_CONSUMPTION','O2_PRODUCTION'};
@@ -685,27 +690,46 @@ classdef romsMaster
 				return
 			elseif strcmp(obj.budget.varname,'NO3')
 				disp('...nitrate fluxes only...');
-				vars = {'SED_DENITRIF'};
-				lvls = {'sed'};
-				disp('Sediment fluxes not coded yet'); return
+				vars  = {'SED_DENITRIF'};
+				vname = {'NO3'};
+				lvls  = {'sed'};
+				% Ignore fg flux
 				obj.romsData.NO3.fg = zeros(size(obj.region.mask_rho3d));
 			elseif strcmp(obj.budget.varname,'NO2')
 				disp('...no nitrite fluxes...');
-				obj.romsData.NO2.fg = zeros(size(obj.region.mask_rho3d));
+				% Ignore fg, sed flux
+				obj.romsData.NO2.fg  = zeros(size(obj.region.mask_rho3d));
+				obj.romsData.NO2.sed = zeros(size(obj.region.mask_rho3d));
 				return
 			elseif strcmp(obj.budget.varname,'N2O')
 				disp('...nitrous oxide fluxes only...');
-				vars = {'FG_N2O'};
-				lvls = {'sfc'};
+				vars  = {'FG_N2O'};
+				vname = {'N2O'};
+				lvls  = {'sfc'};
+				% Ignore sed flux
+				obj.romsData.N2O.sed = zeros(size(obj.region.mask_rho3d));
 			elseif strcmp(obj.budget.varname,'N2O_decomp')
 				disp('...nitrous oxide fluxes (decomp) only...');
-				vars = {'FG_N2O','FG_N2O_ATM','FG_N2O_SIDEN','FG_N2O_SODEN','FG_N2O_AO1'};
-				lvls = {'sfc','sfc','sfc','sfc','sfc'};
+				vars  = {'FG_N2O','FG_N2O_ATM','FG_N2O_SIDEN','FG_N2O_SODEN','FG_N2O_AO1'};
+				vname = {   'N2O',   'N2O_ATM',   'N2O_SIDEN',   'N2O_SODEN',   'N2O_AO1'};
+				lvls  = {   'sfc',       'sfc',         'sfc',         'sfc',       'sfc'};
+				% Ignore sed fluxes
+				obj.romsData.N2O.sed       = zeros(size(obj.region.mask_rho3d));
+				obj.romsData.N2O_ATM.sed   = zeros(size(obj.region.mask_rho3d));
+				obj.romsData.N2O_SIDEN.sed = zeros(size(obj.region.mask_rho3d));
+				obj.romsData.N2O_SODEN.sed = zeros(size(obj.region.mask_rho3d));
+				obj.romsData.N2O_AO1.sed   = zeros(size(obj.region.mask_rho3d));
 			elseif strcmp(obj.budget.varname,'O2')
 				disp('...oxygen fluxes only...');
-				vars = {'FG_O2'};
-				lvls = {'sfc'};
+				disp('...not coded yet...');
 				return
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas fluxes only...');
+				vars  = {'FG_N2','SED_DENITRIF'};
+				vname = {   'N2',          'N2'};
+				lvls  = {  'sfc',         'sed'};
+				% Ignore fg flux
+				obj.romsData.N2_SED.fg = zeros(size(obj.region.mask_rho3d));
 			end	
 			
 			% Load fluxes, restrict to region
@@ -719,25 +743,21 @@ classdef romsMaster
 				
 				% Apply 2D flux to correct z-level to make 3D
 				if strcmp(lvls{i},'sfc')
-					% Get fixed variable (remove 'FG_')
-					vname = vars{i}(4:end);
 					tmpfg = zeros(size(obj.region.mask_rho3d));
 					% Apply value into 3D grid
 					tmpfg(:,:,obj.region.nz,:) = obj.romsData.(vars{i}).data .* obj.region.mask_rho;
 					% Divide by z, save as 3D rate
-					obj.romsData.(vname).fg = tmpfg ./ obj.budget.dzdt.dz;
+					obj.romsData.(vname{i}).fg = tmpfg ./ obj.budget.dzdt.dz;
 				elseif strcmp(lvls{i},'sed')
-					% Get fixed variable (remove 'SED_')  !!! this may need hard coding depending on budget !!!
-					vname  = obj.budget.varame;
 					tmpsed = zeros(size(obj.region.mask_rho3d));
 					% Apply value into 3D grid
 					tmpsed(:,:,1,:) = obj.romsData.(vars{i}).data .* obj.region.mask_rho;
 					% Divide by z, save as 3D rate
-					obj.romsData.(vname).sed = tmpsed ./ obj.budget.dzdt.dz;
+					obj.romsData.(vname{i}).sed = tmpsed ./ obj.budget.dzdt.dz;
 				end
 			end
 
-			% Optional decomp
+			% Optional decomps
 			if strcmp(obj.budget.varname,'N2O_decomp');
 				% 2D version
 				obj.romsData.FG_N2O_DECOMP.data = obj.romsData.FG_N2O_SODEN.data + obj.romsData.FG_N2O_AO1.data + ...
@@ -745,6 +765,10 @@ classdef romsMaster
 				% 3D version
 				obj.romsData.N2O_DECOMP.fg      = obj.romsData.N2O_SODEN.fg + obj.romsData.N2O_AO1.fg + ...
 							          obj.romsData.N2O_ATM.fg   + obj.romsData.N2O_SIDEN.fg;
+			end
+			if strcmp(obj.budget.varname,'N2');
+				% Copy sediment flux from N2 budget
+				obj.romsData.N2_SED.sed = obj.romsData.N2.sed;
 			end
 
 		end % end method getFluxes
@@ -818,6 +842,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'O2')
 				disp('...oxygen only...');
 				vars = {'O2'};
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas only...');
+				vars = {'N2','N2_SED'};
 			end
 
 			% - Load data on either side of 'history' (first,last snapshot)
@@ -878,6 +905,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'O2')
 				disp('...oxygen advection/diffusion only...');
 				vars = {'O2'};
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas advection/diffusion only...');
+				vars = {'N2','N2_SED'};
 			end
 
 			% - Cycle through and load XYfluxes
@@ -984,27 +1014,28 @@ classdef romsMaster
 				vars = {'N2O'};
 			elseif strcmp(obj.budget.varname,'N2O_decomp');
 				disp('...nitrous oxide SMS (decomp) only...')
-				vars = {'N2O_decomp'};
+				vars = {'N2O','N2O_AO1','N2O_SIDEN','N2O_SODEN','N2O_ATM','N2O_decomp'};
 			elseif strcmp(obj.budget.varname,'O2');
 				disp('...oxygen SMS only...');
 				vars = {'O2'};
+			elseif strcmp(obj.budget.varname,'N2');
+				disp('...nitrogen gas SMS only...');
+				vars = {'N2','N2_SED'};
 			end
 			
 			% Scroll through each variable and get SMS
 			for v = 1:length(vars)
 		
 				% Nitrate
-				% SMS = NITROX - DENITRIF1 - SED_DENITRIF - PHOTO_NO3_UPTAKE
 				if strcmp('NO3',vars{v})
 					% Get SMS 
 					obj.romsData.NO3.sms  = obj.romsData.NITROX.data    - ...                                  
-							        obj.romsData.DENITRIF1.data - obj.romsData.photo_NO3.data - tmpsed;
+							        obj.romsData.DENITRIF1.data - obj.romsData.photo_NO3.data;
 					% Apply 3D mask
 					obj.romsData.NO3.sms  = obj.romsData.NO3.sms .* obj.region.mask_rho3d;
 				end
 
 				% Nitrite
-				% SMS = (AMMOX - 2*N2OAMMOX) - NITROX + DENITRIF1 - DENITRIF2 - ANAMMOX - PHOTO_NO2_UPTAKE
 				if strcmp('NO2',vars{v})
 					% Get SMS
 					obj.romsData.NO2.sms  = (obj.romsData.AMMOX.data - 2*obj.romsData.N2OAMMOX.data)   + obj.romsData.DENITRIF1.data - ...
@@ -1015,7 +1046,6 @@ classdef romsMaster
 				end
 
 				% Nitrous Oxide (basic)
-				% SMS = N2OAMMOX + DENITRIF2 - DENITRIF3
 				if strcmp('N2O',vars{v})
 					% Get SMS
 					obj.romsData.N2O.sms  = obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
@@ -1024,26 +1054,67 @@ classdef romsMaster
 					obj.romsData.N2O.sms  = obj.romsData.N2O.sms .* obj.region.mask_rho3d;
 				end
 
+				% Nitrous Oxide from AMMOX (decomp)
+				if strcmp('N2O_AO1',vars{v})
+					% Get SMS
+					obj.romsData.N2O_AO1.sms = [obj.romsData.N2OAMMOX.data  - ...   	
+						             	    obj.romsData.N2OAO1_CONS.data];    
+					% Apply 3D mask
+					obj.romsData.N2O_AO1.sms = obj.romsData.N2O_AO1 .* obj.region.mask_rho3d;
+				end
+
+				% Nitrous Oxide from boundary (decomp)
+				if strcmp('N2O_SIDEN',vars{v})
+					% Get SMS
+					obj.romsData.N2O_SIDEN.sms = [-obj.romsData.N2OSIDEN_CONS.data];
+					% Apply 3D mask
+					obj.romsData.N2O_SIDEN.sms = obj.romsData.N2O_SIDEN .* obj.region.mask_rho3d;
+				end
+	
+				% Nitrous Oxide from denitrif (decomp)
+				if strcmp('N2O_SODEN',vars{v})
+					% Get SMS
+					obj.romsData.N2O_SODEN.sms = [obj.romsData.DENITRIF2.data./2  - ...                      
+							     	      obj.romsData.N2OSODEN_CONS.data];					 	
+					% Apply 3D mask
+					obj.romsData.N2O_SODEN.sms = obj.romsData.N2O_SODEN .* obj.region.mask_rho3d;
+				end
+
+				% Nitrous Oxide from atmosphere (decomp)
+				if strcmp('N2O_ATM',vars{v})
+					% Get SMS
+					obj.romsData.N2O_ATM.sms = [-obj.romsData.N2OATM_CONS.data];
+					% Apply 3D mask
+					obj.romsData.N2O_ATM.sms = obj.romsData.N2O_ATM .* obj.region.mask_rho3d;
+				end
+				
 				% Nitrous Oxide (decomp)
 				if strcmp('N2O_decomp',vars{v})
-					% Get SMS, apply mask
-					obj.romsData.N2O.sms        = [obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
-							     	       obj.romsData.DENITRIF3.data] .* obj.region.mask_rho3d;  		
-					obj.romsData.N2O_AO1.sms    = [obj.romsData.N2OAMMOX.data  - ...   	
-						             	       obj.romsData.N2OAO1_CONS.data] .* obj.region.mask_rho3d;    
-					obj.romsData.N2O_ATM.sms    = [-obj.romsData.N2OATM_CONS.data] .* obj.region.mask_rho3d;
-					obj.romsData.N2O_SIDEN.sms  = [-obj.romsData.N2OSIDEN_CONS.data] .* obj.region.mask_rho3d;
-					obj.romsData.N2O_SODEN.sms  = [obj.romsData.DENITRIF2.data./2  - ...                      
-							     	       obj.romsData.N2OSODEN_CONS.data] .* obj.region.mask_rho3d;					 	
+					% Get SMS
 					obj.romsData.N2O_DECOMP.sms = [obj.romsData.N2OAMMOX.data + obj.romsData.DENITRIF2.data./2  - ...
-							               obj.romsData.DENITRIF3_DECOMP.data] .* obj.region.mask_rho3d;  			         	 
+							               obj.romsData.DENITRIF3_DECOMP.data];  			         	 
+					% Apply 3D mask
+					obj.romsData.N2O_DECOMP.sms = obj.romsData.N2O_DECOMP.sms .* obj.region.mask_rho3d;
 				end
 	
 				% Oxygen
-				% SMS = O2_PRODUCTION - O2_CONSUMPTION
 				if strcmp('O2',vars{v})
 					% Get SMS
 					obj.romsData.O2.sms = obj.romsData.O2_PRODUCTION - obj.romsData.O2_CONSUMPTION .* obj.region.mask_rho3d;
+				end
+
+				% Nitrogen gas
+				if strcmp('N2',vars{v})
+					% Get SMS
+					obj.romsData.N2.sms = [obj.romsData.DENITRIF3.data+ obj.romsData.ANAMMOX.data];
+					% Apply 3D mask
+					obj.romsData.N2.sms = obj.romsData.N2.sms .* obj.region.mask_rho3d;
+				end
+
+				% Nitrogen gas from sediment
+				if strcmp('N2_SED',vars{v})
+					% No SMS
+					obj.romsData.N2_SED.sms = zeros(size(obj.region.mask_rho3d));
 				end
 			end
 
@@ -1080,6 +1151,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'O2')
 				disp('...oxygen advection/diffusion only...');
 				vars = {'O2'};
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas advection/diffusion only...')
+				vars = {'N2','N2_SED'};
 			end
 
 			% Calculate remainder (net)
@@ -1087,7 +1161,7 @@ classdef romsMaster
 				obj.romsData.(vars{i}).net = obj.romsData.(vars{i}).dcdt - (obj.romsData.(vars{i}).adx + ...
 							     obj.romsData.(vars{i}).ady  +  obj.romsData.(vars{i}).adz + ...
 							     obj.romsData.(vars{i}).dfz  +  obj.romsData.(vars{i}).sms + ...
-							     obj.romsData.(vars{i}).fg);
+							     obj.romsData.(vars{i}).fg   +  obj.romsData.(vars{i}).sed);
 			end
 
 			% Optional decomp
@@ -1125,6 +1199,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'N2O_decomp')
 				disp('...nitrous oxide integration (decomp) only...')
 				vars = {'N2O','N2O_AO1','N2O_SIDEN','N2O_SODEN','N2O_ATM','N2O_DECOMP'};
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas integration only...')
+				vars   = {'N2','N2_SED'};
 			end
 		
 			% Go through each 3D rate, integrate vertically
@@ -1179,6 +1256,10 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'O2');
 				disp('...oxygen rates only...');
 				vars = {'O2_CONSUMPTION','O2_PRODUCTION'};
+				return
+			elseif strcmp(obj.budget.varname,'N2');
+				disp('...nitrogen gas rates only...');
+				vars = {'DENITRIF3','ANAMMOX'};
 			end		
 
 			% Go through each 3D rate, integrate vertically
@@ -1221,6 +1302,9 @@ classdef romsMaster
 			elseif strcmp(obj.budget.varname,'N2O_decomp')
 				disp('...nitrous oxide integration (decomp) only...')
 				vars = {'N2O','N2O_AO1','N2O_SIDEN','N2O_SODEN','N2O_ATM','N2O_DECOMP'};
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas integration only...')
+				vars   = {'N2','N2_SED'};
 			end
 		
 			% Go through each variables
@@ -1234,6 +1318,7 @@ classdef romsMaster
 				dfz  = obj.romsData.(vars{i}).dfz .* obj.region.mask_rho3d;
 				sms  = obj.romsData.(vars{i}).sms .* obj.region.mask_rho3d;
 				fg   = obj.romsData.(vars{i}).fg  .* obj.region.mask_rho3d;
+				sed  = obj.romsData.(vars{i}).sed .* obj.region.mask_rho3d;
 				net  = obj.romsData.(vars{i}).net .* obj.region.mask_rho3d;
 				
 				% Integrate vertically (fg term should match real flux)
@@ -1245,6 +1330,7 @@ classdef romsMaster
 				obj.romsData.(vars{i}).intdfz  = squeeze(nansum(dfz .*obj.budget.dzdt.dz,3));
 				obj.romsData.(vars{i}).intsms  = squeeze(nansum(sms .*obj.budget.dzdt.dz,3));
 				obj.romsData.(vars{i}).intfg   = squeeze(nansum(fg  .*obj.budget.dzdt.dz,3));
+				obj.romsData.(vars{i}).intsed  = squeeze(nansum(sed .*obj.budget.dzdt.dz,3));
 				obj.romsData.(vars{i}).intnet  = squeeze(nansum(net .*obj.budget.dzdt.dz,3));
 
 				% ...mmol/m2/s to mmol/s
@@ -1255,6 +1341,7 @@ classdef romsMaster
 				obj.romsData.(vars{i}).totdfz   = nansum(obj.romsData.(vars{i}).intdfz .*obj.region.grid_area,'all'); 
 				obj.romsData.(vars{i}).totsms   = nansum(obj.romsData.(vars{i}).intsms .*obj.region.grid_area,'all'); 
 				obj.romsData.(vars{i}).totfg    = nansum(obj.romsData.(vars{i}).intfg  .*obj.region.grid_area,'all'); 
+				obj.romsData.(vars{i}).totsed   = nansum(obj.romsData.(vars{i}).intsed .*obj.region.grid_area,'all'); 
 				obj.romsData.(vars{i}).totnet   = nansum(obj.romsData.(vars{i}).intnet .*obj.region.grid_area,'all'); 
 			end
 		end
@@ -1263,7 +1350,6 @@ classdef romsMaster
 		function plotConc(obj,varargin)
 			% ------------------
 			% Plot the integrated concentrations
-			% Called in getBudg
 			%
 			% Inputs:
 			% - time = time record to plot (default--> all)
@@ -1302,6 +1388,10 @@ classdef romsMaster
 				disp('...plotting N2O (decomp) concentrations...');
 				vars = {'N2O','N2O_AO1','N2O_SIDEN', 'N2O_SODEN', 'N2O_ATM','N2O_DECOMP'};
 				units = 'mmol N_2O m^{-2}'; 
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...plotting N2 concentrations...');
+				vars  = {'N2','N2_SED'};
+				units = 'mmol N_2 m^{-2}'; 
 			end
 
 			% Process inputs
@@ -1376,8 +1466,7 @@ classdef romsMaster
 		%--------------------------------------------------------------------------------
 		function plotFluxes(obj,varargin)
 			% ------------------
-			% Plot the air-sea fluxes
-			% Called in getBudg
+			% Plot the air-sea and sediment fluxes
 			%
 			% Inputs:
 			% - time = time record to plot (default--> all)
@@ -1400,19 +1489,24 @@ classdef romsMaster
 				disp('...full nitrogen cycle integration...')
 				return
 			elseif strcmp(obj.budget.varname,'NO3')
-				disp('...no nitrate fluxes...');
-				return
+				vars  = {'SED_DENITRIF'};
+				lvls  = {         'sed'};
+				units = 'mmol N m^{-2} s^{-1}'; 
 			elseif strcmp(obj.budget.varname,'NO2')
 				disp('...no nitrite fluxes...');
 				return
 			elseif strcmp(obj.budget.varname,'N2O')
-				disp('...nitrous oxide integration only...')
-				vars   = {'FG_N2O'};
+				vars  = {'FG_N2O'};
+				lvls  = {   'sfc'};
 				units = 'mmol N_2O m^{-2} s^{-1}'; 
 			elseif strcmp(obj.budget.varname,'N2O_decomp')
-				disp('...plotting N2O decomp fluxes...');
-				vars = {'FG_N2O','FG_N2O_AO1','FG_N2O_SIDEN', 'FG_N2O_SODEN', 'FG_N2O_ATM','FG_N2O_DECOMP'};
+				vars  = {'FG_N2O','FG_N2O_AO1','FG_N2O_SIDEN', 'FG_N2O_SODEN', 'FG_N2O_ATM','FG_N2O_DECOMP'};
+				lvls  = {   'sfc',       'sfc',         'sfc',          'sfc',        'sfc',          'sfc'};
 				units = 'mmol N_2O m^{-2} s^{-1}'; 
+			elseif strcmp(obj.budget.varname,'N2')
+				vars   = {'FG_N2','SED_DENITRIF'};
+				lvls   = {  'sfc',         'sed'};
+				units = 'mmol N_2 m^{-2} s^{-1}'; 
 			end
 
 			% Process inputs
@@ -1434,7 +1528,12 @@ classdef romsMaster
 					
 					% Gather data
 					tmpdata = obj.romsData.(vars{i}).data(:,:,tt); % mmol/m2/s
-					
+				
+					% Fix SED_DENITRIF for N2
+					if strcmp(obj.budget.varname,'N2') & strcmp(vars{i},'SED_DENITRIF') 	
+						tmpdata = 0.5 .* tmpdata;
+					end
+
 					% Blank land
 					tmpdata = tmpdata .* obj.region.mask_rho;
 
@@ -1474,7 +1573,11 @@ classdef romsMaster
 					[ax] = map_plot(fig(1),obj.region.lon_rho,obj.region.lat_rho);
 					m_contourf(obj.region.lon_rho,obj.region.lat_rho,tmpdata,clevs,'LineStyle','none');
 					cb   = colorbar;
-					title(['Air-sea Flux: ',vars{i}],'Interpreter','none');
+					if strcmp(lvls{i},'sfc')
+						title(['Air-sea Flux: ',vars{i}],'Interpreter','none');
+					elseif strcmp(lvls{i},'sed')
+						title(['Sediment Flux: ',vars{i}],'Interpreter','none');
+					end
 					ylabel(cb,units)
 					caxis([clevs(1) clevs(end)]);
 					colormap(gca,cmocean('balance'));
@@ -1490,7 +1593,6 @@ classdef romsMaster
 		function plotRates(obj,varargin)
 			% ------------------
 			% Plot the integrated rates
-			% Called in getBudg
 			%
 			% Inputs:
 			% - time = time record to plot (default--> all)
@@ -1529,6 +1631,10 @@ classdef romsMaster
                         	vars = {'DENITRIF2','DENITRIF3','N2OAMMOX','N2OSODEN_CONS','N2OAO1_CONS', ...
                                         'N2OATM_CONS', 'N2OSIDEN_CONS','DENITRIF3_DECOMP'};
 				units = 'mmol N_2O m^{-2} s^{-1}'; 
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrous oxide integration only...')
+				vars  = {'DENITRIF3','ANAMMOX'};
+				units = 'mmol N_2 m^{-2} s^{-1}'; 
 			end
 
 			% Process inputs
@@ -1622,7 +1728,6 @@ classdef romsMaster
 		function plotBudg(obj,varargin);
 			% ------------------
 			% Plot the intergrated budget terms
-			% Called in getBudg
 			%
 			% Inputs:
 			% - time = time record to plot (default--> all)
@@ -1662,6 +1767,10 @@ classdef romsMaster
 				disp('...oxygen plots only...');
 				vars   = {'O2'};
 				units  = 'mmol O2/m2/s';
+			elseif strcmp(obj.budget.varname,'N2')
+				disp('...nitrogen gas plots only...')
+				vars   = {'N2','N2_SED'};
+				units  = 'mmol N/m2/s'; 
 			end
 	
 			% Process inputs
@@ -1685,6 +1794,7 @@ classdef romsMaster
 					dfz  = obj.romsData.(vars{i}).intdfz(:,:,tt);
 					sms  = obj.romsData.(vars{i}).intsms(:,:,tt);
 					fg   = obj.romsData.(vars{i}).intfg(:,:,tt);
+					sed  = obj.romsData.(vars{i}).intsed(:,:,tt);
 					net  = obj.romsData.(vars{i}).intnet(:,:,tt);
 					
 					% Blank land
@@ -1693,6 +1803,7 @@ classdef romsMaster
 					dfz  = dfz  .* obj.region.mask_rho;
 					sms  = sms  .* obj.region.mask_rho;
 					fg   = fg   .* obj.region.mask_rho;
+					sed  = sed  .* obj.region.mask_rho;
 					net  = net  .* obj.region.mask_rho;
 
 					% Get colobars
@@ -1701,6 +1812,7 @@ classdef romsMaster
 					cbar_dfz  = prclims(dfz,'prc',A.prc);
 					cbar_sms  = prclims(sms,'prc',A.prc);
 					cbar_fg   = prclims(fg,'prc',A.prc);
+					cbar_sed  = prclims(sed,'prc',A.prc);
 					cbar_net  = prclims(net,'prc',A.prc);
 					if t == 1
 						cbar.dcdt = cbar_dcdt;
@@ -1708,6 +1820,7 @@ classdef romsMaster
 						cbar.dfz  = cbar_dfz;
 						cbar.sms  = cbar_sms;
 						cbar.fg   = cbar_fg;
+						cbar.sed  = cbar_sed;
 						cbar.net  = cbar_net;
 					end
 					
@@ -1727,6 +1840,9 @@ classdef romsMaster
 					if max(cbar_fg)  > max(cbar.fg);
 						cbar.fg  = cbar_fg;
 					end
+					if max(cbar_sed) > max(cbar.sed);
+						cbar.sed  = cbar_sed;
+					end
 					if max(cbar_net) > max(cbar.net)
 						cbar.net = cbar_net;
 					end
@@ -1744,6 +1860,7 @@ classdef romsMaster
 					dfz  = obj.romsData.(vars{i}).intdfz(:,:,tt);
 					sms  = obj.romsData.(vars{i}).intsms(:,:,tt);
 					fg   = obj.romsData.(vars{i}).intfg(:,:,tt);
+					sed  = obj.romsData.(vars{i}).intsed(:,:,tt);
 					net  = obj.romsData.(vars{i}).intnet(:,:,tt);
 
                                         % Blank land
@@ -1752,10 +1869,11 @@ classdef romsMaster
 					dfz  = dfz  .* obj.region.mask_rho;
 					sms  = sms  .* obj.region.mask_rho;
 					fg   = fg   .* obj.region.mask_rho;
+					sed  = sed  .* obj.region.mask_rho;
 					net  = net  .* obj.region.mask_rho;
 					
 					% Start plots
-					for j = 1:6
+					for j = 1:7
 				
 						% Initiate map figure
 						fig = piofigs('mfig',1);
@@ -1785,6 +1903,11 @@ classdef romsMaster
 							fstr   = ['fg'];
 							clevs  = cbar.fg;
 						elseif j == 6
+							dat    = sed;
+							titstr = ['Integrated ',vars{i},': sediment flux'];
+							fstr   = ['sed'];
+							clevs  = cbar.sed;
+						elseif j == 7
 							dat    = net;
 							titstr = ['Integrated ',vars{i},': net remainder'];
 							fstr   = ['net'];
@@ -1885,22 +2008,21 @@ classdef romsMaster
 				disp('...full nitrogen cycle integration...')
 				return
 			elseif strcmp(obj.budget.varname,'NO3')
-				disp('...nitrate integration only...')
 				vars = {'NITROX','DENITRIF1','photo_NO3'};
 				units = 'mmol N m^{-2} s^{-1}';
 			elseif strcmp(obj.budget.varname,'NO2')
-				disp('...nitrite integration only...')
 				vars  = {'NITROX','DENITRIF1','DENITRIF2','ANAMMOX','photo_NO2','NO2AMMOX'};
 				units = 'mmol N m^{-2} s^{-1}';
 			elseif strcmp(obj.budget.varname,'N2O')
-				disp('...nitrous oxide integration only...')
 				vars  = {'DENITRIF2','DENITRIF3','N2OAMMOX'};
 				units = 'mmol N_2O m^{-2} s^{-1}'; 
 			elseif strcmp(obj.budget.varname,'N2O_decomp')
-				disp('...plotting N2O decomp fluxes...');
                         	vars = {'DENITRIF2','DENITRIF3','N2OAMMOX','N2OSODEN_CONS','N2OAO1_CONS', ...
                                         'N2OATM_CONS', 'N2OSIDEN_CONS','DENITRIF3_DECOMP'};
 				units = 'mmol N_2O m^{-2} s^{-1}'; 
+			elseif strcmp(obj.budget.varname,'N2')
+				vars  = {'DENITRIF3','ANAMMOX'};
+				units = 'mmol N_2 m^{-2} s^{-1}'; 
 			end
 
 			% Plot 1D rates
