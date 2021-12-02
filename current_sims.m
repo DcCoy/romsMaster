@@ -21,6 +21,9 @@ RMdir = '/data/project1/demccoy/ROMS/';
 % - initiate simslist
 simslist = []; simscnt = [1];
 
+% - default simulation
+default_sim = {'peru_VKV4_TUNE2_SPINUP'};
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PERU 10km PRODUCTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -215,6 +218,27 @@ tmp.rcoast = [20];        %[100];
 peru_VKV4_TUNE2_O2_TEST = tmp; clear tmp
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% peru_chile_0p1 VKV4_TUNE2 spinup
+% meta info
+simslist{simscnt} = ['peru_VKV4_TUNE2_SPINUP']; simscnt = simscnt + 1;
+tmp.r_tag         = ['peru_chile_0p1']; % simulation
+tmp.vers          = ['dccoy_VKV4_tune2_spinup']; % version
+tmp.year          = [2049];
+tmp.ext           = [num2str(tmp.year)];
+tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/peru_chile_0p1/grid/peru_chile_0p1_grd.nc'];
+
+% region info (indices)
+tmp.rlati  = [301  461];%[ 321 452];%[ 321 462];
+tmp.rloni  = [ 31  341];%[ 21  281];%[  11 341];
+tmp.rdepi  = [-750 inf];%[-750 inf];
+tmp.rcoast = [20];        %[100];
+
+% rename and save
+peru_VKV4_TUNE2_SPINUP = tmp; clear tmp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PACIFIC 25km PRODUCTS  %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -224,7 +248,7 @@ peru_VKV4_TUNE2_O2_TEST = tmp; clear tmp
 simslist{simscnt} = ['pacmed_NYF4']; simscnt = simscnt + 1;
 tmp.r_tag         = ['pacmed_0p25']; % simulation
 tmp.vers          = ['dccoy_NYF4']; % version
-tmp.year          = [2004];
+tmp.year          = [2009];
 tmp.ext           = [num2str(tmp.year)]; 
 tmp.simPath		  = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
 tmp.avgfile		  = ['avg_',tmp.ext,'.nc']; % file to diagnose
@@ -245,7 +269,7 @@ pacmed_NYF4 = tmp; clear tmp
 simslist{simscnt} = ['pacmed_VKV4_TUNE2']; simscnt = simscnt + 1;
 tmp.r_tag         = ['pacmed_0p25']; % simulation
 tmp.vers          = ['dccoy_VKV4_tune2']; % version
-tmp.year          = [2004];
+tmp.year          = [2009];
 tmp.ext           = [num2str(tmp.year)]; 
 tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
 tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
@@ -261,8 +285,60 @@ tmp.rcoast = [];
 pacmed_VKV4_TUNE2 = tmp; clear tmp
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pacmed_0p25 10 year spinup
+% meta info
+simslist{simscnt} = ['pacmed_SPINUP']; simscnt = simscnt + 1;
+tmp.r_tag         = ['pacmed_0p25']; % simulation
+tmp.vers          = ['spinup']; % version
+tmp.year          = [2000];
+tmp.ext           = [num2str(tmp.year)]; 
+tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
+
+% region info (indices)
+tmp.rlati  = [];
+tmp.rloni  = [];
+tmp.rdepi  = [];
+tmp.rcoast = [];
+
+% rename and save
+pacmed_SPINUP = tmp; clear tmp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% USNW 1km PRODUCTS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% usw1 annual data
+% meta info
+simslist{simscnt} = ['USNW1']; simscnt = simscnt + 1;
+tmp.r_tag         = ['USNW1']; % simulation
+tmp.vers          = ['annual']; % version
+tmp.year          = [2006];
+tmp.ext           = [num2str(tmp.year)]; 
+tmp.simPath		  = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile		  = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/USNW1/grid/usnw1_grd.nc'];
+
+% region info (indices)
+tmp.rlati  = [];
+tmp.rloni  = [];
+tmp.rdepi  = [];
+tmp.rcoast = [];
+
+% rename and save
+USNW1 = tmp; clear tmp
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Also save default sim
+eval(['default = ',default_sim{1},';']);
+simslist{end+1} = 'default';
+
+% Save
 save([RMdir,'current_sims.mat'],simslist{:})
 clear(simslist{:});
 clear simslist simscnt RMdir
