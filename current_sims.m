@@ -276,9 +276,9 @@ tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
 tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
 
 % region info (indices)
-tmp.rlati  = [];
-tmp.rloni  = [];
-tmp.rdepi  = [];
+tmp.rlati  = [101 251];
+tmp.rloni  = [251 751];
+tmp.rdepi  = [-100 inf];
 tmp.rcoast = [];
 
 % rename and save
@@ -304,6 +304,27 @@ tmp.rcoast = [];
 
 % rename and save
 pacmed_SPINUP = tmp; clear tmp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pacmed_0p25 pdamien_VKV4_TUNE2 
+% meta info
+simslist{simscnt} = ['pacmed_PDAMIEN_VKV4_TUNE2']; simscnt = simscnt + 1;
+tmp.r_tag         = ['pacmed_0p25']; % simulation
+tmp.vers          = ['pdamien_VKV4_tune2']; % version
+tmp.year          = [2009];
+tmp.ext           = [num2str(tmp.year)]; 
+tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
+
+% region info (indices)
+tmp.rlati  = [101 251];
+tmp.rloni  = [251 751];
+tmp.rdepi  = [-100 inf];
+tmp.rcoast = [];
+
+% rename and save
+pacmed_PDAMIEN_VKV4_TUNE2 = tmp; clear tmp
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% USNW 1km PRODUCTS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
