@@ -17,16 +17,16 @@ classdef romsMaster
 	%----------------------------------------------------------------------------------------
 	properties
 		info     % contains variable information
-      	paths    % paths to data, directories, diagnostic data, etc
+		paths    % paths to data, directories, diagnostic data, etc
 		grid     % contains grid data and extra fields
 		region   % contains grid data in defined region
 		slice    % contains slice coordinates
 		profile  % contains profile coordinates
-      	romsData % contains ROMS data for comparisons
-      	diagData % contains validation data for comparions
-   	end
+		romsData % contains ROMS data for comparisons
+		diagData % contains validation data for comparions
+	end
 	%----------------------------------------------------------------------------------------
-   	methods
+	methods
 		%--------------------------------------------------------------------------------
 		function obj = init(obj,sim,varargin)
 			% -------------------
@@ -40,16 +40,15 @@ classdef romsMaster
 			%
 			% Optional Inputs:
 			% - region = 'full' will override default region in current_sims.mat
-			%            'manual' will not auto-run defineRegion (do it after 
-			%            calling init(obj,...))
-			%			 'default' will use default region in current_sims.mat
+			%            'manual' will not auto-run defineRegion (do it after calling init(obj,...))
+			%            'default' will use default region in current_sims.mat
 			% - year   = override the default year (set in current_sims.m)
 			%
 			% Example:
 			% - obj = init(obj,'peru')         <-- if obj defined
 			% - obj = init(romsMaster,'peru')  <-- if obj undefined
 			% -------------------
-	
+			
 			%  Begin
 			disp(' ');
 			disp('---------------------------------');
@@ -80,10 +79,10 @@ classdef romsMaster
 			warning off
 			addpath /data/project1/demccoy/matlab_scripts/
 			addpath /data/project1/demccoy/ROMS/tools/Roms_tools_MF/Preprocessing_tools/
-		
+			
 			% Run current_sims
 			current_sims;
-     		
+			
 			% Load simulation
 			load('current_sims.mat',sim);	
 			eval(['unpactStruct(',sim,');']);
@@ -98,22 +97,23 @@ classdef romsMaster
 			% grab paths according to inputs
 			obj.paths.simPath = simPath; % root path
 
-      		% grab file paths
-         	obj.paths.avg    = [obj.paths.simPath,'avg/',avgfile];
+			% grab file paths
+			obj.paths.avg    = [obj.paths.simPath,'avg/',avgfile];
 			obj.paths.his    = [obj.paths.simPath,'his/','his_',ext,'.nc'];
 			obj.paths.flux   = [obj.paths.simPath,'phys_flux/','phys_flux_avg_',ext,'.nc'];
-         	obj.paths.zavg 	 = [obj.paths.simPath,'z_avg/','z_',avgfile];
+			obj.paths.zavg 	 = [obj.paths.simPath,'z_avg/','z_',avgfile];
 			obj.paths.grid   = gfile;
 
-      		% initiate directories if they dont exist
-        	[pathstr, name, ext] = fileparts(obj.paths.avg);
+			% initiate directories if they dont exist
+			[pathstr, name, ext] = fileparts(obj.paths.avg);
 			mkdir([obj.paths.simPath,'Figures']);
-       		mkdir([obj.paths.simPath,'Figures/',name,'/']);
-       		mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
-      		
+			mkdir([obj.paths.simPath,'Figures/',name,'/']);
+			mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
+			mkdir([obj.paths.simPath,'Figures/',name,'/Comparison']);
+		
 			% grab plot paths
-         	obj.paths.plots.diag	= [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
-         	obj.paths.plots.comp	= [obj.paths.simPath,'Figures/',name,'/Comparisons/'];
+			obj.paths.plots.diag	= [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
+			obj.paths.plots.comp	= [obj.paths.simPath,'Figures/',name,'/Comparison/'];
 			obj.paths.plots.tmpfigs = ['/data/project1/demccoy/tmpfigs/'];
 
 			% Get info for ROMS variables
@@ -124,11 +124,11 @@ classdef romsMaster
 
 			% make z_avg file if it doesn't exist
 			if exist([simPath,'z_avg/z_',avgfile]) ~= 2
-                disp('---------------------------------');
-        		disp('Create z_avg Climatology File');
-                disp('---------------------------------');
-        		obj = make_zavg(obj,avgfile);
-			end	
+				disp('---------------------------------');
+				disp('Create z_avg Climatology File');
+				disp('---------------------------------');
+				obj = make_zavg(obj,avgfile);
+			end
 
 			% Save subregion indices
 			obj.region.lat_lim   = rlati;
@@ -165,9 +165,9 @@ classdef romsMaster
 			rmpath('/data/project1/demccoy/ROMS/ROMS_tools/nc_tools/');
 			addpath('/usr/local/MATLAB/R2019b/toolbox/matlab/imagesci/');
 
-        	% get grid coordinates
-         	obj.grid.lon_rho  = double(ncread(obj.paths.grid,'lon_rho'));
-         	obj.grid.lat_rho  = double(ncread(obj.paths.grid,'lat_rho'));
+			% get grid coordinates
+			obj.grid.lon_rho  = double(ncread(obj.paths.grid,'lon_rho'));
+			obj.grid.lat_rho  = double(ncread(obj.paths.grid,'lat_rho'));
 			obj.grid.pm       = double(ncread(obj.paths.grid,'pm'));
 			obj.grid.pn       = double(ncread(obj.paths.grid,'pn'));
 			obj.grid.angle    = double(ncread(obj.paths.grid,'angle'));
@@ -178,7 +178,7 @@ classdef romsMaster
 			obj.grid.dy       = 1./ncread(obj.paths.grid,'pn');
 			obj.grid.area_rho = double(obj.grid.dx.*obj.grid.dy);
 
-		    % get more coord diags 
+			% get more coord diags 
 			tmpinfo = ncinfo(obj.paths.avg);
 			tmpinfo = tmpinfo.Dimensions;
 			xi      = strmatch('xi_rho',{tmpinfo.Name});
@@ -233,18 +233,18 @@ classdef romsMaster
 			obj.grid.polygon(:,2) = [obj.grid.lat_rho(1,:) obj.grid.lat_rho(:,end)'...
 									 fliplr(obj.grid.lat_rho(end,:)) flipud(obj.grid.lat_rho(:,1))'];
 
-		    % Make coord data all single
-            obj.grid = romsMaster.struct2double(obj.grid);
+			% Make coord data all single
+			obj.grid = romsMaster.struct2double(obj.grid);
 		end % end methods loadGrid
 
-        %--------------------------------------------------------------------------------
-        function [obj] = clearROMS(obj) 
-            % ----------------------
+		%--------------------------------------------------------------------------------
+		function [obj] = clearROMS(obj) 
+			% ----------------------
 			% Clears loaded data and coordinates
-            %
-            % Usage:
-            % - [obj] = clearROMS(obj) 
-            % ----------------------
+			%
+			% Usage:
+			% - [obj] = clearROMS(obj) 
+			% ----------------------
 			
 			% Clear fields
 			obj.slice = [];
@@ -253,18 +253,18 @@ classdef romsMaster
 			obj.diagData = [];
 
 		end % end methods clearROMS
-        %--------------------------------------------------------------------------------
-        function [obj] = romsInfo(obj,r_tag,year)
-            % ----------------------
-            % Obtains info from roms file
-            %
-            % Usage:
-            % - [obj] = romsInfo(obj,r_tag,year) 
+		%--------------------------------------------------------------------------------
+		function [obj] = romsInfo(obj,r_tag,year)
+			% ----------------------
+			% Obtains info from roms file
+			%
+			% Usage:
+			% - [obj] = romsInfo(obj,r_tag,year) 
 			%
 			% Inputs:
 			% - r_tag = name of simulation (i.e. peru_chile_0p1)
 			% - year  = simulation year (i.e. 2000)
-            % ----------------------
+			% ----------------------
 
 			rmpath /data/project1/demccoy/ROMS/ROMS_tools/nc_tools/
 
@@ -367,12 +367,12 @@ classdef romsMaster
 			% ----------------------
 
 			% Grab inputs (varargin)
-            A.dx    = [20];
+			A.dx    = [20];
 			A.dy    = [20];
 			A.ticks = [1];
 			A.font  = [12];
 			A.save  = [0];
-            A       = parse_pv_pairs(A,varargin);
+			A       = parse_pv_pairs(A,varargin);
 
 			% Plot lon/lat lines
 			fig(1) = piofigs('lfig',1.5);
@@ -396,29 +396,29 @@ classdef romsMaster
 				close(fig(1));
 			end
 		end % end method gridView
-        
+		
 		%--------------------------------------------------------------------------------
-        function [fig,ax] = regionView(obj,varargin)
-            % ----------------------
-            % Plots a ROMS grid map along with a regional grid
-            %
-            % Usage:
-            % - [fig,ax] = regionView(obj,varargin)
-            %
-            % Inputs (varargin):
-            % - ticks = 0 (no lon/lat labels), 1 (yes), 2 (fancy box)
-            % - font  = tick font size (default = 12) 
-            % - save  = 1 (print), 0 (no print)
-            %
-            % Example:
-            % - [fig,ax] = regionView(obj);
-            % ----------------------
+		function [fig,ax] = regionView(obj,varargin)
+			% ----------------------
+			% Plots a ROMS grid map along with a regional grid
+			%
+			% Usage:
+			% - [fig,ax] = regionView(obj,varargin)
+			%
+			% Inputs (varargin):
+			% - ticks = 0 (no lon/lat labels), 1 (yes), 2 (fancy box)
+			% - font  = tick font size (default = 12) 
+			% - save  = 1 (print), 0 (no print)
+			%
+			% Example:
+			% - [fig,ax] = regionView(obj);
+			% ----------------------
 
-            % Grab inputs (varargin)
-            A.ticks = [1];
-            A.font  = [12];
-            A.save  = [0];
-            A       = parse_pv_pairs(A,varargin);
+		% Grab inputs (varargin)
+		A.ticks = [1];
+		A.font  = [12];
+		A.save  = [0];
+		A       = parse_pv_pairs(A,varargin);
 	
 			% Optional plot of region
 			if ~isempty(obj.region.lon_rho)
@@ -547,7 +547,7 @@ classdef romsMaster
 			obj.paths.flux = [obj.paths.simPath,fluxfile];
 			obj.paths.zavg = [obj.paths.simPath,zavgfile];
 			% Update info
-            obj = romsInfo(obj,obj.info.r_tag,year);
+			obj = romsInfo(obj,obj.info.r_tag,year);
 			% Redefine grid (mostly for z_r, z_w, Hz)
 			obj = loadGrid(obj);
 			% Redefine region
@@ -557,15 +557,15 @@ classdef romsMaster
 									obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
 			obj.region.Hz         = obj.grid.Hz(obj.region.lon_lim(1):obj.region.lon_lim(2),...
 									obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);	
-            % Initiate directories if they dont exist
-            [pathstr, name, ext] = fileparts(obj.paths.avg);
-            mkdir([obj.paths.simPath,'Figures']);
-            mkdir([obj.paths.simPath,'Figures/',name,'/']);
-            mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
+			% Initiate directories if they dont exist
+			[pathstr, name, ext] = fileparts(obj.paths.avg);
+			mkdir([obj.paths.simPath,'Figures']);
+			mkdir([obj.paths.simPath,'Figures/',name,'/']);
+			mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
 
-            % grab plot paths
-            obj.paths.plots.diag    = [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
-            obj.paths.plots.tmpfigs = ['/data/project1/demccoy/tmpfigs/'];
+			% grab plot paths
+			obj.paths.plots.diag    = [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
+			obj.paths.plots.tmpfigs = ['/data/project1/demccoy/tmpfigs/'];
 		end % end methods changeInputs
 
 		%--------------------------------------------------------------------------------
@@ -592,7 +592,6 @@ classdef romsMaster
 
 			disp('---------------------------------');
 			disp('Defining subregion for budget');
-
 			close all
 
 			% Toggles
@@ -606,7 +605,7 @@ classdef romsMaster
 			if isempty(obj.grid)
 				obj = initBudg(obj);
 			end
-                        
+						
 			% Process inputs
 			% Use defaults (current_sims.m)  if calling defineRegion without inputs
 			if ~isempty(A.lon_lim)
@@ -648,14 +647,14 @@ classdef romsMaster
 			obj.region.grid_area  = (1./(obj.region.pm .* obj.region.pn));
 			try
 				obj.region.z_r        = obj.grid.z_r(obj.region.lon_lim(1):obj.region.lon_lim(2),...
-								        obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
+										obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
 				obj.region.z_w        = obj.grid.z_w(obj.region.lon_lim(1):obj.region.lon_lim(2),...
-								        obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
+										obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
 				obj.region.Hz         = obj.grid.Hz(obj.region.lon_lim(1):obj.region.lon_lim(2),...
-								        obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
+										obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);
 			catch; disp('Something went wrong with defineRegion...'); return; end
 			obj.region.dx		  = 1./obj.region.pm;
-            obj.region.dy		  = 1./obj.region.pn;
+			obj.region.dy		  = 1./obj.region.pn;
 			obj.region.nx         = diff(obj.region.lon_lim)+1;
 			obj.region.ny         = diff(obj.region.lat_lim)+1;
 			obj.region.nz         = obj.grid.nz;
@@ -710,7 +709,7 @@ classdef romsMaster
 					obj.region.area3d(:,:,z,t)     = tmp_area;
 				end
 			end
-                	
+					
 			% Make 3D mask for z_avg data
 			zind        = find(-obj.grid.z_avg_dep >= obj.region.dep_lim(1) & -obj.grid.z_avg_dep <= obj.region.dep_lim(2));
 			mask_rhoz3d = nan(obj.region.nx,obj.region.ny,length(obj.grid.z_avg_dep));
@@ -990,12 +989,12 @@ classdef romsMaster
 				
 				% Get start/finish from history
 				his1 = double(ncread(obj.paths.his,vars{v},...
-				       [obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1],...
+						[obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1],...
 					   [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1 inf obj.region.nt]));
 				
 				his2 = double(ncread(obj.paths.his,vars{v},...
-				       [obj.region.lon_lim(1) obj.region.lat_lim(1) 1 2],...
-	   				   [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1 inf obj.region.nt]));
+					   [obj.region.lon_lim(1) obj.region.lat_lim(1) 1 2],...
+					   [diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+1 inf obj.region.nt]));
 
 				% Divide by dt, apply 3d mask
 				obj.romsData.(vars{v}).budget.dcdt = ((his2 - his1)/obj.region.dt) .* obj.region.mask_rho3d;
@@ -1027,8 +1026,8 @@ classdef romsMaster
 			for f = 1:length(vars)
 				% Load XYZ advection
 				temp.X  = double(ncread(obj.paths.flux,['HorXAdvFlux_',vars{f}],...
-					            [obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1  ],...
-							    [diff(obj.region.lon_lim)+2 diff(obj.region.lat_lim)+1 inf inf]));
+								[obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1  ],...
+								[diff(obj.region.lon_lim)+2 diff(obj.region.lat_lim)+1 inf inf]));
 				temp.Y  = double(ncread(obj.paths.flux,['HorYAdvFlux_',vars{f}],...
 								[obj.region.lon_lim(1) obj.region.lat_lim(1) 1 1  ],...
 								[diff(obj.region.lon_lim)+1 diff(obj.region.lat_lim)+2 inf inf]));
@@ -1050,12 +1049,12 @@ classdef romsMaster
 				% X advection
 				adx(1:nx,1:ny,1:nz,1:nt) = NaN;
 				adx(1:nx,:,:,1:nt)       = (temp.X(1:nx,:,:,:) - temp.X(2:nx+1,:,:,:)) ./ ...
-										    obj.region.area3d(1:nx,:,:,:) ./ obj.region.dz(1:nx,:,:,:);
+											obj.region.area3d(1:nx,:,:,:) ./ obj.region.dz(1:nx,:,:,:);
 				
 				% Y advection
 				ady(1:nx,1:ny,1:nz,1:nt) = NaN; 		
 				ady(:,1:ny,:,:)          = (temp.Y(:,1:ny,:,:) - temp.Y(:,2:ny+1,:,:)) ./ ...
-										    obj.region.area3d(:,1:ny,:,:) ./ obj.region.dz(:,1:ny,:,:);
+											obj.region.area3d(:,1:ny,:,:) ./ obj.region.dz(:,1:ny,:,:);
 				
 				% Z advection
 				adz(1:nx,1:ny,1:nz,1:nt) = NaN; 		
@@ -1064,7 +1063,7 @@ classdef romsMaster
 				% Z diffusion
 				dfz(1:nx,1:ny,1:nz,1:nt) = NaN; 		
 				dfz(:,:,:,:)             = (temp.Zd(:,:,1:nz,:) - temp.Zd(:,:,2:nz+1,:)) ./ obj.region.dz(:,:,:,:);
-
+				
 				% Apply 3D mask
 				obj.romsData.(vars{f}).budget.adx = adx .* obj.region.mask_rho3d(:,:,:,:);
 				obj.romsData.(vars{f}).budget.ady = ady .* obj.region.mask_rho3d(:,:,:,:);
@@ -1306,8 +1305,8 @@ classdef romsMaster
 			% defaults for optional  arguments
 			A.time      = [];
 			A.prc       = [2];
-            A.lonbounds = [floor(min(obj.region.lon_rho(:))) ceil(max(obj.region.lon_rho(:)))];
-            A.latbounds = [floor(min(obj.region.lat_rho(:))) ceil(max(obj.region.lat_rho(:)))];
+			A.lonbounds = [floor(min(obj.region.lon_rho(:))) ceil(max(obj.region.lon_rho(:)))];
+			A.latbounds = [floor(min(obj.region.lat_rho(:))) ceil(max(obj.region.lat_rho(:)))];
 			A.tfont     = 18;
 			A.cbfont    = 14;
 			A           = parse_pv_pairs(A,varargin); % parse method arguments to A
@@ -1328,8 +1327,8 @@ classdef romsMaster
 					% Gather terms
 					dcdt = obj.budget.intdcdt.(vars{i})(:,:,tt);
 					adv  = obj.budget.intadx.(vars{i})(:,:,tt) + ...
-					       obj.budget.intady.(vars{i})(:,:,tt) + ...
-					       obj.budget.intadz.(vars{i})(:,:,tt);
+						   obj.budget.intady.(vars{i})(:,:,tt) + ...
+						   obj.budget.intadz.(vars{i})(:,:,tt);
 					dfz  = obj.budget.intdfz.(vars{i})(:,:,tt);
 					sms  = obj.budget.intsms.(vars{i})(:,:,tt);
 					fg   = obj.budget.intfg.(vars{i})(:,:,tt);
@@ -1394,8 +1393,8 @@ classdef romsMaster
 					% Gather terms
 					dcdt = obj.budget.intdcdt.(vars{i})(:,:,tt);
 					adv  = obj.budget.intadx.(vars{i})(:,:,tt) + ...
-					       obj.budget.intady.(vars{i})(:,:,tt) + ...
-					       obj.budget.intadz.(vars{i})(:,:,tt);
+						   obj.budget.intady.(vars{i})(:,:,tt) + ...
+						   obj.budget.intadz.(vars{i})(:,:,tt);
 					dfz  = obj.budget.intdfz.(vars{i})(:,:,tt);
 					sms  = obj.budget.intsms.(vars{i})(:,:,tt);
 					fg   = obj.budget.intfg.(vars{i})(:,:,tt);
@@ -1577,7 +1576,7 @@ classdef romsMaster
 						end
 						if length(A.time) == 1
 							title({[A.vars{j},' vs. Depth: ',tstr{A.time(k)},' Average'],...
-						       	   ['Lon=',num2str(A.lon(i)),', Lat=',num2str(A.lat(i))]});
+								   ['Lon=',num2str(A.lon(i)),', Lat=',num2str(A.lat(i))]});
 							legend(tstr{A.time(k)});
 						end
 						plot(tmpdata,depth,'LineWidth',1.5,'Color',clrs(k,:));
@@ -1604,7 +1603,7 @@ classdef romsMaster
 						lstr(13) = {'Avg'};
 						legend(lstr,'Location','Southeast');
 						title({[A.vars{j},' vs. Depth'],...
-						       ['Lon=',num2str(A.lon(i)),', Lat=',num2str(A.lat(i))]});
+							   ['Lon=',num2str(A.lon(i)),', Lat=',num2str(A.lat(i))]});
 						fname = [A.vars{j},'_vs_z_Lon_',num2str(A.lon(i)),'_Lat_',num2str(A.lat(i)),'_annual'];
 						print('-djpeg',[obj.paths.plots.roms.profile,fname])
 						close all
@@ -1789,7 +1788,7 @@ classdef romsMaster
 			obj.paths.diag.nstar.lat   = {'lat'};
 			obj.paths.diag.nstar.name  = {'WOA-18 N*'};
 			obj.paths.diag.nstar.units = {'$mmol$ $m^{-3}$'};
-        	        	 
+						 
 			% silicate (only 1.00 available)
 			obj.paths.diag.SiO3.file  = {'/data/project3/data/woa18/silicate/1p0/si_woa18_clim.nc'};
 			obj.paths.diag.SiO3.type  = {'nc'};
@@ -1839,10 +1838,10 @@ classdef romsMaster
 			obj.paths.diag.SFC_CHL.lat   = {'lat'};
 			obj.paths.diag.SFC_CHL.name  = {'MODIS-Aqua Chlorophyll'};
 			obj.paths.diag.SFC_CHL.units = {'$mg$ $C$ $m^{-3}$'};
-         		
+				
 			% NPP products (VGPM, CBPM, CAFE)	
 			obj.paths.diag.NPP.file  = {'/data/project2/yangsi/analysis/NPPcode/std-VGPM/std-VGPMnpp_MODIS_clim2002-2018.nc',...
-									    '/data/project2/yangsi/analysis/NPPcode/CbPM2/CbPM2npp_MODIS_clim2002-2018.nc',...
+										'/data/project2/yangsi/analysis/NPPcode/CbPM2/CbPM2npp_MODIS_clim2002-2018.nc',...
 										'/data/project1/data/MODIS-Aqua/CAFE_NPP/climatology/nppclim_CAFE_MODIS_9km.nc'}; 
 			obj.paths.diag.NPP.type  = {'nc','nc','nc'};
 			obj.paths.diag.NPP.var   = {'npp','npp','npp'};
@@ -1977,7 +1976,7 @@ classdef romsMaster
 					% Reduce to region
 					if typ == 2
 						tmpdata 		            = tmpdata(obj.region.lon_lim(1):obj.region.lon_lim(2),...
-														      obj.region.lat_lim(1):obj.region.lat_lim(2),:);
+															  obj.region.lat_lim(1):obj.region.lat_lim(2),:);
 						tmpdata                     = tmpdata .* obj.region.mask_rho;
 						obj.romsData.(vars{i}).data = tmpdata;
 					elseif typ == 3
@@ -2067,7 +2066,7 @@ classdef romsMaster
 							end
 							% Reduce to region
 							tmpata = tmpdata(obj.region.lon_lim(1):obj.region.lon_lim(2),...
-   											 obj.region.lat_lim(1):obj.region.lat_lim(2),:);
+											 obj.region.lat_lim(1):obj.region.lat_lim(2),:);
 							tmpdata = tmpdata .* obj.region.mask_rho3d;
 							obj.romsData.(obj.info.var2d{q2(j)}).data = tmpdata;
 							disp(['...done!']);
@@ -2090,10 +2089,10 @@ classdef romsMaster
 			end
 	
 			% Return original avg file
-            if ~isempty(A.file)
-                obj.paths.avg  = tmpavg;
+			if ~isempty(A.file)
+				obj.paths.avg  = tmpavg;
 				obj.paths.zavg = tmpzavg;
-            end
+			end
 		end % end methods loadData
 
 		%--------------------------------------------------------------------------------
@@ -2116,9 +2115,9 @@ classdef romsMaster
 			% - obj = getAvgData(obj,{'O2','NO3'},2000:2009,'lvl',[300 500]);
 			% -------------------
 
-            % defaults for optional  arguments
-            A.lvl  = [];
-            A      = parse_pv_pairs(A,varargin); % parse method arguments to A
+			% defaults for optional  arguments
+			A.lvl  = [];
+			A      = parse_pv_pairs(A,varargin); % parse method arguments to A
 
 			% Loop through years and load variables
 			for i = 1:length(vars)
@@ -2180,7 +2179,7 @@ classdef romsMaster
 			%             Cannot be used with 'depths' input
 			% - time    = cell array of times to plot
 			%             'DJF','MAM','JJA','SON','ANN',or 3-letter month name (Dec, Jan, etc)
-			%	      i.e. {'DJF','MAM','JJA','SON'} for seasonal plots
+			%		      i.e. {'DJF','MAM','JJA','SON'} for seasonal plots
 			% - conv    = array of length(vars) to apply conversion factors
 			% - plttype = none (default), tmpfigs, or define file type ('png' or 'pdf');
 			%
@@ -2217,7 +2216,7 @@ classdef romsMaster
 
 			% check inputs
 			if ~isempty(A.vars) % vars
- 				for i = 1:length(A.vars)
+				for i = 1:length(A.vars)
 					if ~iscell(A.vars(i));
 						disp(' ');
 						disp('vars must be a cell array');
@@ -2311,8 +2310,8 @@ classdef romsMaster
 					lidx = [];
 				elseif q0 == 1
 					lidx = [];
-			        	disp('-------------------------');
-			     		disp('z_avg Depths:');
+						disp('-------------------------');
+						disp('z_avg Depths:');
 					for i = 1:length(obj.grid.z_avg_dep)
 						if i < 10
 							disp([num2str(i),'   == ',num2str(obj.grid.z_avg_dep(i)),'m']);
@@ -2371,7 +2370,7 @@ classdef romsMaster
 
 			% process time input
 			if isempty(A.time) & obj.region.nt == 12
-			        disp('-------------------------');
+					disp('-------------------------');
 				disp('DJF, MAM, JJA, SON, ANN, or ');
 				disp('3-letter month string cell array');
 				A.time = input('---------------------------\nChoose time(s):\n---------------------------\n>> ');
@@ -2651,12 +2650,13 @@ classdef romsMaster
 				tmpdata{ff} = obj.romsData.(vars{ff}).data;			
 			end
 			data = cat(5,tmpdata{:});
+			clear tmpdata;
 
 			% Take slice of data for each month
 			disp(' '); disp(['Slicing ROMS data @ ',num2str(deg),'deg ',dstr,'...']);disp(' ');
 			dims = [dmsn nz nl ns obj.region.nx obj.region.ny length(vars)];
 			[tmpslice,tmpmask,tmpdepth] = romsMaster.lonlat_slice(dims,lonlat,data,mask,deg,obj.grid.z_avg_dep,fillmat);
-		     	 
+				 
 			% Get lon/lat data (outside parfor)
 			tmpdeg  = NaN(dmsn,ns);
 			for i = 1:dmsn
@@ -2728,9 +2728,9 @@ classdef romsMaster
 			% sliced temperature (but not salinity) data from the validation dataset
 			% -------------------
 
-            % Grab longitude/latitude data
-            lon  = obj.region.lon_rho;
-            lat  = obj.region.lat_rho;
+			% Grab longitude/latitude data
+			lon  = obj.region.lon_rho;
+			lat  = obj.region.lat_rho;
 
 			% Choose latitude, longitude
 			if strcmp(choice,'lat')
@@ -2762,8 +2762,8 @@ classdef romsMaster
 			end
 			tmpdeg = repmat(tmpdeg,1,1,nz); tmpdeg = permute(tmpdeg,[1 3 2]);
 
-            % Dimensions to fill
-            fillmat  = [dmsn nz ns];
+			% Dimensions to fill
+			fillmat  = [dmsn nz ns];
 			tmpdepth = obj.grid.z_avg_dep'.*ones(fillmat);
 
 			% Perform slices of each variable
@@ -2920,9 +2920,9 @@ classdef romsMaster
 			% - obj = computeVar(obj,{'sigma0'},'type','z_avg');
 			% ------------------
 
-            % process inputs
-            A.type    = 'raw';
-            A         = parse_pv_pairs(A,varargin);
+			% process inputs
+			A.type    = 'raw';
+			A         = parse_pv_pairs(A,varargin);
 
 			% dims for vertical computations
 			nx = obj.region.nx;
@@ -2990,7 +2990,7 @@ classdef romsMaster
 				% bvf calc
 				elseif strcmp(vars{i},'bvf') | strcmp(vars{i},'pv');
 					disp('Calculating bvf (Brunt Vaisala)');
-                    obj = computeVar(obj,{'pres'},'type',A.type);
+					obj = computeVar(obj,{'pres'},'type',A.type);
 					if isfield(obj.romsData,'temp');
 						tt = 1;
 						origtemp = obj.romsData.temp;
@@ -3003,8 +3003,8 @@ classdef romsMaster
 					else
 						ss = 0;
 					end
-                    obj = loadData(obj,{'temp','salt'},'type',A.type);
-                    tmptemp = reshape(sw_temp(obj.romsData.salt.data(:),obj.romsData.temp.data(:),...
+					obj = loadData(obj,{'temp','salt'},'type',A.type);
+					tmptemp = reshape(sw_temp(obj.romsData.salt.data(:),obj.romsData.temp.data(:),...
 											  obj.romsData.pres.data(:),0),size(obj.romsData.salt.data)); 
 					if strcmp(A.type,'raw')
 						tmplat  = repmat(obj.region.lat_rho,1,1,obj.region.nz,obj.region.nt);
@@ -3032,8 +3032,8 @@ classdef romsMaster
 					% Remake
 					bvf_rho = reshape(bvf_rho,dims(1),dims(2),dims(3),dims(4));
 					bvf_rho = permute(bvf_rho,[2 3 1 4]);
-                    pv_rho  = reshape(pv_rho,dims(1),dims(2),dims(3),dims(4));
-                    pv_rho  = permute(pv_rho,[2 3 1 4]);
+					pv_rho  = reshape(pv_rho,dims(1),dims(2),dims(3),dims(4));
+					pv_rho  = permute(pv_rho,[2 3 1 4]);
 					obj.romsData.bvf.data  = bvf_rho;
 					obj.romsData.bvf.name  = 'averaged Brunt Vaisala frequency';
 					obj.romsData.bvf.units = '$s^{-2}$';
@@ -3050,30 +3050,30 @@ classdef romsMaster
 					else
 						obj.romsData.salt = [];
 					end
-                    if strcmp(A.type,'raw');
-                        obj.romsData.bvf.data = obj.romsData.bvf.data .* obj.region.mask_rho3d;
-                        obj.romsData.pv.data  = obj.romsData.pv.data .* obj.region.mask_rho3d;
-                    elseif strcmp(A.type,'z_avg');
-                        obj.romsData.bvf.data = obj.romsData.bvf.data .* obj.region.mask_rhoz3d;
-                        obj.romsData.pv.data  = obj.romsData.pv.data .* obj.region.mask_rhoz3d;
-                    end
+					if strcmp(A.type,'raw');
+						obj.romsData.bvf.data = obj.romsData.bvf.data .* obj.region.mask_rho3d;
+						obj.romsData.pv.data  = obj.romsData.pv.data .* obj.region.mask_rho3d;
+					elseif strcmp(A.type,'z_avg');
+						obj.romsData.bvf.data = obj.romsData.bvf.data .* obj.region.mask_rhoz3d;
+						obj.romsData.pv.data  = obj.romsData.pv.data .* obj.region.mask_rhoz3d;
+					end
 				% sigma0
 				elseif strcmp(vars{i},'sigma0')
 					disp('Calculating sigma0');
-                    obj = computeVar(obj,{'pres'},'type',A.type);
-                    if isfield(obj.romsData,'temp');
-                        tt = 1;
-                        origtemp = obj.romsData.temp;
-                    else
-                        tt = 0;
-                    end
-                    if isfield(obj.romsData,'salt');
-                        ss = 1;
-                        origsalt = obj.romsData.salt;
-                    else
-                        ss = 0;
-                    end
-                    obj = loadData(obj,{'temp','salt'},'type',A.type);
+					obj = computeVar(obj,{'pres'},'type',A.type);
+					if isfield(obj.romsData,'temp');
+						tt = 1;
+						origtemp = obj.romsData.temp;
+					else
+						tt = 0;
+					end
+					if isfield(obj.romsData,'salt');
+						ss = 1;
+						origsalt = obj.romsData.salt;
+					else
+						ss = 0;
+					end
+					obj = loadData(obj,{'temp','salt'},'type',A.type);
 					tmp_lon      = repmat(obj.region.lon_rho,1,1,nz,nt);
 					tmp_lat      = repmat(obj.region.lat_rho,1,1,nz,nt);
 					tmp_salt     = obj.romsData.salt.data;
@@ -3087,11 +3087,11 @@ classdef romsMaster
 						tmp_sigma0   = reshape(tmp_sigma0,obj.region.nx,obj.region.ny,obj.region.nz,obj.region.nt);
 					end
 					obj.romsData.sigma0.data  = tmp_sigma0;
-                    if strcmp(A.type,'raw');
-                        obj.romsData.sigma0.data = obj.romsData.sigma0.data .* obj.region.mask_rho3d;
-                    elseif strcmp(A.type,'z_avg');
-                        obj.romsData.sigma0.data = obj.romsData.sigma0.data .* obj.region.mask_rhoz3d;
-                    end
+					if strcmp(A.type,'raw');
+						obj.romsData.sigma0.data = obj.romsData.sigma0.data .* obj.region.mask_rho3d;
+					elseif strcmp(A.type,'z_avg');
+						obj.romsData.sigma0.data = obj.romsData.sigma0.data .* obj.region.mask_rhoz3d;
+					end
 					obj.romsData.sigma0.name  = 'averaged Potential Density';
 					obj.romsData.sigma0.units = '$kg$ $m^{-3}$';
 					if tt == 1
@@ -3109,11 +3109,11 @@ classdef romsMaster
 					obj = loadData(obj,{'NO3','PO4'},'type',A.type);
 					tmpnstar = obj.romsData.NO3.data - 16.*obj.romsData.PO4.data + 2.9;
 					obj.romsData.nstar.data = tmpnstar;
-	                if strcmp(A.type,'raw');
-                        obj.romsData.nstar.data = obj.romsData.nstar.data .* obj.region.mask_rho3d;
-                    elseif strcmp(A.type,'z_avg');
-                        obj.romsData.nstar.data = obj.romsData.nstar.data .* obj.region.mask_rhoz3d;
-                    end
+					if strcmp(A.type,'raw');
+						obj.romsData.nstar.data = obj.romsData.nstar.data .* obj.region.mask_rho3d;
+					elseif strcmp(A.type,'z_avg');
+						obj.romsData.nstar.data = obj.romsData.nstar.data .* obj.region.mask_rhoz3d;
+					end
 					obj.romsData.nstar.name = 'averaged N*';
 					obj.romsData.nstar.units = '$mmol$ $N$ $m^{-3}$';
 				% NPP
@@ -3123,16 +3123,16 @@ classdef romsMaster
 					tmpHz   = obj.region.Hz; 
 					tmpNPP  = squeeze(nansum(tmpprod.*tmpHz,3)).*3600*24*12;
 					obj.romsData.NPP.data  = tmpNPP;
-                    obj.romsData.NPP.data  = obj.romsData.NPP.data .* obj.region.mask_rho;
+					obj.romsData.NPP.data  = obj.romsData.NPP.data .* obj.region.mask_rho;
 					obj.romsData.NPP.name  = 'averaged Net Primary Production (NPP)';
 					obj.romsData.NPP.units = '$mg$ $C$ $m^{-2}$ $d^{-1}$'; 
 				% SSH	
 				elseif strcmp(vars{i},'SSH') | strcmp(vars{i},'ssh');
 					obj = loadData(obj,{'zeta'},'type','raw');
 					obj = loadDiag(obj,{'SSH'},0);
-                    slacorr = nanmedian(obj.diagData.SSH.data(:)) - nanmedian(obj.romsData.zeta.data(:));
-                    disp(' '); disp(['Adding correction of ',num2str(slacorr),'m to ROMS SSH']);
-                    obj.romsData.SSH.data = obj.romsData.zeta.data + slacorr;
+					slacorr = nanmedian(obj.diagData.SSH.data(:)) - nanmedian(obj.romsData.zeta.data(:));
+					disp(' '); disp(['Adding correction of ',num2str(slacorr),'m to ROMS SSH']);
+					obj.romsData.SSH.data = obj.romsData.zeta.data + slacorr;
 					obj.romsData.SSH.name = 'averaged sea-surface height';
 					obj.romsData.SSH.units = '$m$'; 
 				% Wind Stress or Wind Stress Curl
@@ -3144,8 +3144,8 @@ classdef romsMaster
 					[tmpws,tmpwsc] = romsMaster.WindStress(tmpu,tmpv,obj.region.lon_rho,obj.region.lat_rho,tmpang);
 					obj.romsData.ws.data  = tmpws;
 					obj.romsData.wsc.data = tmpwsc;
-                    obj.romsData.ws.data  = obj.romsData.ws.data .* obj.region.mask_rho;
-                    obj.romsData.wsc.data = obj.romsData.wsc.data .* obj.region.mask_rho;
+					obj.romsData.ws.data  = obj.romsData.ws.data .* obj.region.mask_rho;
+					obj.romsData.wsc.data = obj.romsData.wsc.data .* obj.region.mask_rho;
 					obj.romsData.ws.name  = 'averaged wind-stress';
 					obj.romsData.wsc.name = 'averaged wind-stress curl';
 					obj.romsData.ws.units = '$N$ $m^{-2}$';
@@ -3180,39 +3180,39 @@ classdef romsMaster
 
 					% Save ROMS data (make positive)
 					obj.romsData.MLD.data = tmpmld;	
-                    obj.romsData.MLD.data = obj.romsData.MLD.data .* obj.region.mask_rho;
+					obj.romsData.MLD.data = obj.romsData.MLD.data .* obj.region.mask_rho;
 					obj.romsData.MLD.name = 'averaged mixed-layer depth';
 					obj.romsData.MLD.units = '$m$';
-                % ChlA
-                elseif strcmp(vars{i},'SFC_CHL') | strcmp(vars{i},'sfc_chl');
-                    obj     = loadData(obj,{'TOT_CHL'},'type','z_avg');
+				% ChlA
+				elseif strcmp(vars{i},'SFC_CHL') | strcmp(vars{i},'sfc_chl');
+					obj     = loadData(obj,{'TOT_CHL'},'type','z_avg');
 					ind     = find(obj.grid.z_avg_dep<50);
-                    tmpchla = obj.romsData.TOT_CHL.data;
+					tmpchla = obj.romsData.TOT_CHL.data;
 					tmpchla = squeeze(nanmean(tmpchla(:,:,ind,:),3));
-                    obj.romsData.SFC_CHL.data  = tmpchla .* obj.region.mask_rho;
-                    obj.romsData.SFC_CHL.name  = 'averaged surface chlA';
-                    obj.romsData.SFC_CHL.units = '$mg$ $chlA$ $m^{-3}$';
+					obj.romsData.SFC_CHL.data  = tmpchla .* obj.region.mask_rho;
+					obj.romsData.SFC_CHL.name  = 'averaged surface chlA';
+					obj.romsData.SFC_CHL.units = '$mg$ $chlA$ $m^{-3}$';
 				else
 					disp([vars{i},' is already, or cant be, calculated']);
 				end
 			end
 		end % end methods computeVar
 	
-        %--------------------------------------------------------------------------------
-        function obj = ipslice(obj,vars,ip)
-            % ------------------
+		%--------------------------------------------------------------------------------
+		function obj = ipslice(obj,vars,ip)
+			% ------------------
 			% Slices ROMS along a given isopycnal
-            % 
-            % Usage:
-            % - obj = ipslice(obj,vars,ip);
-            % 
-            % Inputs:
-            % - vars = cell array of ROMS variables to slice
-            % - ip   = isopycnal(s) to slice along
-            %
-            % Example:
+			% 
+			% Usage:
+			% - obj = ipslice(obj,vars,ip);
+			% 
+			% Inputs:
+			% - vars = cell array of ROMS variables to slice
+			% - ip   = isopycnal(s) to slice along
+			%
+			% Example:
 			% - obj = ipslice(obj,{'O2'},26.5);
-            % -------------------	
+			% -------------------	
 
 			% Compute sigma0
 			try; obj.romsData.sigma0.data;
@@ -3427,7 +3427,7 @@ classdef romsMaster
 
 		%--------------------------------------------------------------------------------
 		function obj = getProfile(obj,vars,lon,lat)
-        	% ------------------
+			% ------------------
 			% Loads profile data at the nearest lon/lat point 
 			%
 			% Usage:
@@ -3443,11 +3443,11 @@ classdef romsMaster
 			%
 			% Example:
 			%	- obj = getProfile(obj,{'temp','salt','O2','NO3'},[250 250],[-15 -20]);
-        	% -------------------
+			% -------------------
 
 			% process inputs
-            A.yr_range = [];
-            A          = parse_pv_pairs(A,varargin);	
+			A.yr_range = [];
+			A          = parse_pv_pairs(A,varargin);	
 
 			% Get indices of nearest point
 			lon_idx = [];
@@ -3457,14 +3457,14 @@ classdef romsMaster
 				all_dist                = distance(lat(i),lon(i),obj.region.lat_rho,obj.region.lon_rho);
 				[lon_idx(i),lat_idx(i)] = find(all_dist == min(all_dist(:)));
 			end
-               
+			   
 			% Load data
 			if isempty(A.yr_range)
 				obj = loadData(obj,vars,'type','z_avg');
 			else
 				obj = getAvgData(obj,vars,A.yr_range);
 			end
-                
+				
 			% Go through all variables and lon/lats
 			for v = 1:length(vars)
 				disp(['...grabbing ',vars{v},' profile(s)']);
@@ -3482,7 +3482,7 @@ classdef romsMaster
 		end % end method getProfile
 
 		%--------------------------------------------------------------------------------
-  		function obj = loadDiag(obj,vars,depth,varargin)
+		function obj = loadDiag(obj,vars,depth,varargin)
 			% ------------------
 			% Loads and interpolates monthly 2D validation data to the ROMS grid
 			% See initDiags for available fields or type (obj.paths.diag)
@@ -3647,7 +3647,7 @@ classdef romsMaster
 		end % end method loadDiag
 
 		%--------------------------------------------------------------------------------
-      		function obj = make_zavg(obj,avgfile)
+			function obj = make_zavg(obj,avgfile)
 			% ------------------
 			% - Vertically interpolates the sigma coordinates ROMS file to 
 			% - WOA constant depth levels
@@ -3677,7 +3677,7 @@ classdef romsMaster
 				h = ncread(obj.paths.avg,'h');
 				cd(z_avg_dir);
 				cmd = ['z_slice_onwoa ', obj.paths.avg];
-         			system(cmd);
+					system(cmd);
 			catch
 				path1 = [obj.paths.simPath,'avg'];
 				path2 = [obj.paths.simPath,'z_avg'];
@@ -3707,7 +3707,7 @@ classdef romsMaster
 			% - return to original directory
 			cd(od);
 
-      		end % end method make_zavg
+			end % end method make_zavg
 
 		%--------------------------------------------------------------------------------
 		function [fig,cb] = mapPlot(obj,dat,varargin);
@@ -4009,14 +4009,14 @@ classdef romsMaster
 			end
 		end % end method mapCmp
 
-        %--------------------------------------------------------------------------------
-        function [fig,cb] = slicePlot(obj,dat,varargin)
-            % ------------------
-            % Loads and interpolates monthly 2D validation data to the ROMS grid
-            % See initDiags for available fields or type (obj.paths.diag)
-            %
-            % Usage:
-            % - [fig,cb] = slicePlot(obj,dat,varargin);
+		%--------------------------------------------------------------------------------
+		function [fig,cb] = slicePlot(obj,dat,varargin)
+			% ------------------
+			% Loads and interpolates monthly 2D validation data to the ROMS grid
+			% See initDiags for available fields or type (obj.paths.diag)
+			%
+			% Usage:
+			% - [fig,cb] = slicePlot(obj,dat,varargin);
 			%
 			% Inputs:
 			% - dat: output structure produced from sliceROMS or sliceDiag
@@ -4026,28 +4026,28 @@ classdef romsMaster
 			% - xlims: hard-coded x-limits (degrees)
 			% - zlims: hard-coded z-limits (meters)
 			% - cmap:  colormaps (if used, must be a cell array of length (vars))
-            % - fontsize:   default 10
-            % - figtype:    default 'mfig' (140mm wide), can use 'sfig' (90mm) or 'lfig' (190mm)
-            % - figdim:     default 1 (same height as width, its a multiplier)
-            % - prc:        percentage to limit colorbar axes
-            % - bal:        balance colorbar around 0 (1 == yes, 0 == no)
-            % - levels:     hard-coded levels to plot (can't be used with A.prc)
+			% - fontsize:   default 10
+			% - figtype:    default 'mfig' (140mm wide), can use 'sfig' (90mm) or 'lfig' (190mm)
+			% - figdim:     default 1 (same height as width, its a multiplier)
+			% - prc:        percentage to limit colorbar axes
+			% - bal:        balance colorbar around 0 (1 == yes, 0 == no)
+			% - levels:     hard-coded levels to plot (can't be used with A.prc)
 			%
 			% Example:
 			% - [fig,cb] = slicePlot(obj,dat,'xlims',[140 260],'zlims',[-500 0]);
-            % ------------------
+			% ------------------
 
-            % User-inputs
+			% User-inputs
 			A.slice      = [];
-            A.xlims      = [];
-            A.zlims      = [];
+			A.xlims      = [];
+			A.zlims      = [];
 			A.cmap       = [];
-            A.fontsize   = 10;
-            A.figtype    = 'mfig';
-            A.figdim     = 0.33;
-            A.prc        = 0.5;
-            A.bal        = 0;
-            A.levels     = [];
+			A.fontsize   = 10;
+			A.figtype    = 'mfig';
+			A.figdim     = 0.33;
+			A.prc        = 0.5;
+			A.bal        = 0;
+			A.levels     = [];
 			A = parse_pv_pairs(A,varargin);
 
 			% Check that A.slice has also been reduced
@@ -4074,11 +4074,11 @@ classdef romsMaster
 				dat(zind==0) = NaN;
 			end
 
-            % Get universal levels
-            if isempty(A.levels)
-                A.levels = romsMaster.prclims(dat(:),'prc',A.prc,'bal',A.bal);
-                A.levels = linspace(A.levels(1),A.levels(2),20);
-            end
+			% Get universal levels
+			if isempty(A.levels)
+				A.levels = romsMaster.prclims(dat(:),'prc',A.prc,'bal',A.bal);
+				A.levels = linspace(A.levels(1),A.levels(2),20);
+			end
 			dat(dat<A.levels(1)) = A.levels(1);
 			dat(dat>A.levels(end)) = A.levels(end);
 			
@@ -4113,82 +4113,82 @@ classdef romsMaster
 			end
 		end % end method slicePlot
 
-        %--------------------------------------------------------------------------------
-        function [figs,cbs] = sliceCmp(obj,dat1,dat2,varargin)
-            % ------------------
-            % A way to quickly plot slice comparisons
-            % Produces 3 plots: dat1 and dat2 fields with the same colorbar, 
-            % and a 3rd plot of the difference between them (dat1 - dat2)
-            %
-            % Usage:
-            % - [figs,cbs] = sliceCmp(obj,dat1,dat2,varargin);
-            %
-            % Inputs:
-            % - dat1 = 2D field to plot (prepare it before using the script)
-            % - dat2 = same same but different 2D field to plot (prepare it before using the script)
-            %
-            % Options:
-            % - slice: if several slices were made, specify which one you want to plot here
-            % - xlims: hard-coded x-limits (degrees)
-            % - zlims: hard-coded z-limits (meters)
-            % - cmap:  colormaps (if used, must be a cell array of length (vars))
-            % - fontsize:   default 10
-            % - figtype:    default 'mfig' (140mm wide), can use 'sfig' (90mm) or 'lfig' (190mm)
-            % - figdim:     default 1 (same height as width, its a multiplier)
-            % - prc:        percentage to limit colorbar axes
-            % - bal:        balance colorbar around 0 (1 == yes, 0 == no)
-            % - levels:     hard-coded levels to plot (can't be used with A.prc)
-            %
-            % Example:
-            % - [figs,cbs] = sliceCmp(obj,dat1,dat2,'xlims',[140 260],'zlims',[-500 0]);
-            % ------------------
+		%--------------------------------------------------------------------------------
+		function [figs,cbs] = sliceCmp(obj,dat1,dat2,varargin)
+			% ------------------
+			% A way to quickly plot slice comparisons
+			% Produces 3 plots: dat1 and dat2 fields with the same colorbar, 
+			% and a 3rd plot of the difference between them (dat1 - dat2)
+			%
+			% Usage:
+			% - [figs,cbs] = sliceCmp(obj,dat1,dat2,varargin);
+			%
+			% Inputs:
+			% - dat1 = 2D field to plot (prepare it before using the script)
+			% - dat2 = same same but different 2D field to plot (prepare it before using the script)
+			%
+			% Options:
+			% - slice: if several slices were made, specify which one you want to plot here
+			% - xlims: hard-coded x-limits (degrees)
+			% - zlims: hard-coded z-limits (meters)
+			% - cmap:  colormaps (if used, must be a cell array of length (vars))
+			% - fontsize:   default 10
+			% - figtype:    default 'mfig' (140mm wide), can use 'sfig' (90mm) or 'lfig' (190mm)
+			% - figdim:     default 1 (same height as width, its a multiplier)
+			% - prc:        percentage to limit colorbar axes
+			% - bal:        balance colorbar around 0 (1 == yes, 0 == no)
+			% - levels:     hard-coded levels to plot (can't be used with A.prc)
+			%
+			% Example:
+			% - [figs,cbs] = sliceCmp(obj,dat1,dat2,'xlims',[140 260],'zlims',[-500 0]);
+			% ------------------
 
-            % User-inputs
-            A.slice      = [];
-            A.xlims      = [];
-            A.zlims      = [];
-            A.cmap       = [];
-            A.fontsize   = 10;
-            A.figtype    = 'mfig';
-            A.figdim     = 0.33;
-            A.prc        = 2;
-            A.bal        = 0;
-            A.levels     = [];
+			% User-inputs
+			A.slice      = [];
+			A.xlims      = [];
+			A.zlims      = [];
+			A.cmap       = [];
+			A.fontsize   = 10;
+			A.figtype    = 'mfig';
+			A.figdim     = 0.33;
+			A.prc        = 2;
+			A.bal        = 0;
+			A.levels     = [];
 			A.difflevels = [];
-            A = parse_pv_pairs(A,varargin);
+			A = parse_pv_pairs(A,varargin);
 
-            % Check that A.slice has also been reduced
-            if ndims(obj.slice.depth)==3 & isempty(A.slice)
-                disp('You forgot to specify which slice! Killing');
-                return
-            elseif isempty(A.slice);
-                A.slice = 1;
-            end
-            tmpdeg = obj.slice.deg(:,:,A.slice);
+			% Check that A.slice has also been reduced
+			if ndims(obj.slice.depth)==3 & isempty(A.slice)
+				disp('You forgot to specify which slice! Killing');
+				return
+			elseif isempty(A.slice);
+				A.slice = 1;
+			end
+			tmpdeg = obj.slice.deg(:,:,A.slice);
 			if ndims(obj.slice.depth)==3
 				tmpdep = obj.slice.depth(:,:,A.slice);
 			elseif ndims(obj.slice.depth)==2
 				tmpdep = obj.slice.depth;
 			end
 
-            % Reduce data
-            if ~isempty(A.xlims);
-                xind = A.xlims(1) <= tmpdeg & tmpdeg <= A.xlims(2);
-                dat1(xind==0) = NaN;
-                dat2(xind==0) = NaN;
-            end
-            if ~isempty(A.zlims);
-                zind = A.zlims(1) <= tmpdep & tmpdep <= A.zlims(2);
-                dat1(zind==0) = NaN;
-                dat2(zind==0) = NaN;
-            end
+			% Reduce data
+			if ~isempty(A.xlims);
+				xind = A.xlims(1) <= tmpdeg & tmpdeg <= A.xlims(2);
+				dat1(xind==0) = NaN;
+				dat2(xind==0) = NaN;
+			end
+			if ~isempty(A.zlims);
+				zind = A.zlims(1) <= tmpdep & tmpdep <= A.zlims(2);
+				dat1(zind==0) = NaN;
+				dat2(zind==0) = NaN;
+			end
 			if isempty(A.levels);
 				alldat  = [dat1(:) dat2(:)];
 				lvls     = romsMaster.prclims(alldat,'prc',A.prc,'bal',A.bal);
 				A.levels = linspace(lvls(1),lvls(2),20);
 			end
 
-            % Make figs(1) and figs(2)
+			% Make figs(1) and figs(2)
 			[figs(1),cbs(1)] = slicePlot(obj,dat1,...
 				'slice',A.slice,'xlims',A.xlims,'zlims',A.zlims,'cmap',A.cmap,'fontsize',A.fontsize,...
 				'figtype',A.figtype,'figdim',A.figdim,'levels',A.levels);
@@ -4196,28 +4196,28 @@ classdef romsMaster
 				'slice',A.slice,'xlims',A.xlims,'zlims',A.zlims,'cmap',A.cmap,'fontsize',A.fontsize,...
 				'figtype',A.figtype,'figdim',A.figdim,'levels',A.levels);
 
-            % Get differences
-            diff_dat  = dat1 - dat2;
+			% Get differences
+			diff_dat  = dat1 - dat2;
 			if isempty(A.difflevels)
 				A.difflevels = romsMaster.prclims(diff_dat,'prc',A.prc,'bal',1);
 				A.difflevels = linspace(A.difflevels(1),A.difflevels(2),20);
 			end
 
 			% Make figs(3), difference
-            [figs(3),cbs(3)] = slicePlot(obj,diff_dat,...
-                'slice',A.slice,'xlims',A.xlims,'zlims',A.zlims,'cmap','balance','fontsize',A.fontsize,...
-                'figtype',A.figtype,'figdim',A.figdim,'levels',A.difflevels);
+			[figs(3),cbs(3)] = slicePlot(obj,diff_dat,...
+				'slice',A.slice,'xlims',A.xlims,'zlims',A.zlims,'cmap','balance','fontsize',A.fontsize,...
+				'figtype',A.figtype,'figdim',A.figdim,'levels',A.difflevels);
 
 		end % end method sliceCmp
 
-        %--------------------------------------------------------------------------------
-        function [obj] = OMZthick(obj,omzthresh)
-            % ------------------
-            % Calculates OMZ thickness for ROMS and diagnostic oxygen products:
+		%--------------------------------------------------------------------------------
+		function [obj] = OMZthick(obj,omzthresh)
+			% ------------------
+			% Calculates OMZ thickness for ROMS and diagnostic oxygen products:
 			% WOA-18 and Bianchi (2012) objmap2
-            %
-            % Usage:
-            % - [obj] = OMZthick(obj,thresh)  
+			%
+			% Usage:
+			% - [obj] = OMZthick(obj,thresh)  
 			%
 			% Inputs:
 			% - omzthresh: mmol/m3 thresholds in O2 to define 'oxygen minimum zone'
@@ -4227,7 +4227,7 @@ classdef romsMaster
 			%
 			% This will calculate OMZ (defined as O2 < 10 uMol) thickness from ROMS and
 			% validation productions (WOA-18, Bianchi objective mapping 2)
-            % ------------------
+			% ------------------
 
 			% Load first validation set
 			% WOA-18
@@ -4356,121 +4356,121 @@ classdef romsMaster
 	methods (Static)
 		%--------------------------------------------------------------------------------
 		function [smean sstd scount sprob]  = scatter_density(xdata,ydata,xbounds,ybounds)
-        	% ------------------
+			% ------------------
 			% - grid data for scatter density plots  
 			% ------------------
-         		
+				
 			xbounds = xbounds(:); 
 			ybounds = ybounds(:);
-         		scount  = nan(length(xbounds)-1,length(ybounds)-1);
-         		sprob   = scount;
-         		smean   = nan(length(xbounds)-1,1);
-         		sstd    = smean;
-         
-         		for i = 1 : length(xdata(:))
-            			if mod(i,10000) == 0
-               				i
-            			end
-            			indx = find(xdata(i)>=xbounds(1:end-1) & xdata(i)<xbounds(2:end));
-            			indy = find(ydata(i)>=ybounds(1:end-1) & ydata(i)<ybounds(2:end));
-            			if isempty(indx)
-               				if xdata(i) <= xbounds(1)
-                  				indx=1;
-               				elseif xdata(i)>=xbounds(end)
-                  				indx=length(xbounds)-1;
-               				end
-            			end
-         
-            			if isempty(indy)
-               				if ydata(i) <= ybounds(1)
-                  				indy=1;
-               				elseif ydata(i)>=ybounds(end)
-                  				indy=length(ybounds)-1;
-               				end
-            			end
-            			if isnan(scount(indx,indy))
-                			scount(indx,indy)=1;
-            			else
-                			scount(indx,indy)=scount(indx,indy)+1;
-            			end
-            			if isnan(smean(indx))
-                			smean(indx) = ydata(i);
-            			else
-                			smean(indx) = smean(indx) + ydata(i);
-            			end
-         		end
-         
-         		smean = smean ./nansum(scount,2);
-         		sprob = scount./repmat(nansum(scount,2),1,length(ybounds)-1)*100;
+				scount  = nan(length(xbounds)-1,length(ybounds)-1);
+				sprob   = scount;
+				smean   = nan(length(xbounds)-1,1);
+				sstd    = smean;
+		 
+				for i = 1 : length(xdata(:))
+						if mod(i,10000) == 0
+							i
+						end
+						indx = find(xdata(i)>=xbounds(1:end-1) & xdata(i)<xbounds(2:end));
+						indy = find(ydata(i)>=ybounds(1:end-1) & ydata(i)<ybounds(2:end));
+						if isempty(indx)
+							if xdata(i) <= xbounds(1)
+								indx=1;
+							elseif xdata(i)>=xbounds(end)
+								indx=length(xbounds)-1;
+							end
+						end
+		 
+						if isempty(indy)
+							if ydata(i) <= ybounds(1)
+								indy=1;
+							elseif ydata(i)>=ybounds(end)
+								indy=length(ybounds)-1;
+							end
+						end
+						if isnan(scount(indx,indy))
+							scount(indx,indy)=1;
+						else
+							scount(indx,indy)=scount(indx,indy)+1;
+						end
+						if isnan(smean(indx))
+							smean(indx) = ydata(i);
+						else
+							smean(indx) = smean(indx) + ydata(i);
+						end
+				end
+		 
+				smean = smean ./nansum(scount,2);
+				sprob = scount./repmat(nansum(scount,2),1,length(ybounds)-1)*100;
 		end % end static method scatter_density
 
 		%--------------------------------------------------------------------------------
 		function x = lon360(x)
-        	% ------------------
+			% ------------------
 			% - corrects negative longitudes such that all lon are between 0:360
 			% ------------------
 			
 			x(x<0) = x(x<0) + 360;
-      	end % end static method lon360
+		end % end static method lon360
 
 		%--------------------------------------------------------------------------------
-      	function x = lon180(x)
-        	% ------------------
+		function x = lon180(x)
+			% ------------------
 			% - corrects longitudes such that all lon are between -180:180  
 			% ------------------
-         		
+				
 			x(x>180) = x(x>180) - 360;
-      	end % end static method lon180
+		end % end static method lon180
 
 		%--------------------------------------------------------------------------------
-      	function o2_corr = woao2corr(o2)
-        	% ------------------
+		function o2_corr = woao2corr(o2)
+			% ------------------
 			% -  applies Bianchi 2012 correction to O2
 			% ------------------
-         		
+				
 			o2_corr=1.009*o2-2.523;
-         	o2_corr(o2_corr<0)=0;
-      	end % end static method woao2corr
+			o2_corr(o2_corr<0)=0;
+		end % end static method woao2corr
 
 		%--------------------------------------------------------------------------------
-      	function x = struct2double(x)
-        	% ------------------
+		function x = struct2double(x)
+			% ------------------
 			% - converts structure fields to double  
 			% ------------------
-         		
+				
 			ffields = fields(x);
 			for ff = 1 : length(ffields)
 					if isa(x.(ffields{ff}),'double')
 						x.(ffields{ff}) = double(x.(ffields{ff}));
 					end
 			end
-      	end % end static method struct2double
+		end % end static method struct2double
 
 		%--------------------------------------------------------------------------------
-      	function loglevs=dfloglevs(levs,logminparam)
-        	% ------------------
+		function loglevs=dfloglevs(levs,logminparam)
+			% ------------------
 			% - converts positive levels into symmetrical centered around 0 levels
 			% - in log space. For use in difference plots with log scales  
 			% ------------------
-         		
+				
 			levs(abs(levs)<logminparam)=sign(levs(abs(levs)<logminparam)).*logminparam;
 			loglevs=levs;
 			loglevs(levs>0)=+abs(log10(logminparam) - (log10(levs(levs>0))));
 			loglevs(levs<0)=-abs(log10(logminparam) - log10(abs(levs(levs<0))));
-      	end % end static method dfloglevs
+		end % end static method dfloglevs
 
 		%--------------------------------------------------------------------------------
-      	function x = struct2single(x)
-        	% ------------------
+		function x = struct2single(x)
+			% ------------------
 			% - converts structure fields to single  
 			% ------------------
-         		
+				
 			ffields = fields(x);
-         		for ff = 1 : length(ffields)
-            			if isa(x.(ffields{ff}),'double')
-               				x.(ffields{ff}) = single(x.(ffields{ff}));
-            			end
-         		end
+				for ff = 1 : length(ffields)
+						if isa(x.(ffields{ff}),'double')
+							x.(ffields{ff}) = single(x.(ffields{ff}));
+						end
+				end
 		end % end static method struct2single
 
 		%--------------------------------------------------------------------------------
@@ -4520,7 +4520,7 @@ classdef romsMaster
 
 		%--------------------------------------------------------------------------------
 		function [ws,wsc] = WindStress(u,v,lon,lat,ang)
-        	% ------------------
+			% ------------------
 			% - calculates wind stress and wind stress curl from zonal/meridional wind stress 
 			% ------------------
 			
@@ -4548,12 +4548,12 @@ classdef romsMaster
 			for i = 2:size(lon,1)-1;
 				for j = 2:size(lon,2)-1;
 					dx = sw_dist([lat(i+1,j) lat(i-1,j)],...
-						     [lon(i+1,j) lon(i-1,j)],'km')*1000;
+							 [lon(i+1,j) lon(i-1,j)],'km')*1000;
 					dy = sw_dist([lat(i,j+1) lat(i,j-1)],...
-						     [lon(i,j+1) lon(i,j-1)],'km')*1000;
+							 [lon(i,j+1) lon(i,j-1)],'km')*1000;
 					for t = 1:c
 						wsc(i,j,t) = (N(i+1,j,t)-N(i-1,j,t))/dx - ...
-							     (E(i,j+1,t)-E(i,j-1,t))/dy ;
+								 (E(i,j+1,t)-E(i,j-1,t))/dy ;
 						cnt = cnt + 1;
 						if ismember(cnt,progress)
 							disp([num2str(pcnt),'% complete']);
@@ -4562,7 +4562,7 @@ classdef romsMaster
 					end
 				end
 			end
-      		end % end static method WindStress
+			end % end static method WindStress
 
 		%--------------------------------------------------------------------------------
 		function [lon,lat] = glodap_coord
@@ -4593,7 +4593,7 @@ classdef romsMaster
 
 				% Query lon/lat box
 				x = []; y = []; idx = [];
-                       		[x] = input('---------------------------\nLon/lat estimate ([lon,lat]):\n---------------------------\n>> ');
+							[x] = input('---------------------------\nLon/lat estimate ([lon,lat]):\n---------------------------\n>> ');
 				[y] = x(2); 
 				[x] = x(1);
 
@@ -4603,7 +4603,7 @@ classdef romsMaster
 				
 				% Query keep or reject
 				disp([num2str(length(idx)),' profiles found']);
-                       		q = input('---------------------------\nOK? (1 == YES):\n---------------------------\n>> ');
+							q = input('---------------------------\nOK? (1 == YES):\n---------------------------\n>> ');
 				if q == 1 & ~isempty(idx)
 					break
 				else
@@ -4654,10 +4654,10 @@ classdef romsMaster
 			tmpslice = NaN(dmsn,nz,nl,ns,nv);
 			tmpdepth = NaN(dmsn,nz,nl,ns);
 			tmpmask  = NaN(dmsn,nz,nl,ns);
-                       
+					   
 			% - Start parpool
-            delete(gcp('nocreate'));
-            parpool(12);
+			delete(gcp('nocreate'));
+			parpool(12);
 			parfor rcrd = 1:nl
 				% - Only get data for that month
 				tmpdata = squeeze(data(:,:,:,rcrd,:));
@@ -4685,18 +4685,18 @@ classdef romsMaster
 			delete(gcp);
 		end % end static method lonlat_slice
 
-        %--------------------------------------------------------------------------------
-        function [salt_abs] = getSA(salt,pres,lon,lat)
-            % -------------------
-            % Function to call gsw_SA_from_SP, but in parallel
-            % 
-            % Usage:
+		%--------------------------------------------------------------------------------
+		function [salt_abs] = getSA(salt,pres,lon,lat)
+			% -------------------
+			% Function to call gsw_SA_from_SP, but in parallel
+			% 
+			% Usage:
 			% - [salt_abs] = getSA(salt,pres,lon,lat);
 			%
 			% Inputs:
 			% - salt, pres, lon, lat = ROMS variables...must be the same size!
-            % 
-            % -------------------
+			% 
+			% -------------------
 
 			% Start parpool
 			delete(gcp('nocreate'));
@@ -4723,7 +4723,7 @@ classdef romsMaster
 
 		end % end static method getSA
 
-        %--------------------------------------------------------------------------------
+		%--------------------------------------------------------------------------------
 		function lims = prclims(data,varargin)
 			% -------------------
 			% Script to automatically create limits of data to show
@@ -4759,7 +4759,7 @@ classdef romsMaster
 			end
 		end % end static method prclims
 
-        %--------------------------------------------------------------------------------
+		%--------------------------------------------------------------------------------
 		function [outvar] = grid_to_grid(inlon,inlat,invar,outlon,outlat)
 			% --------------------------------------------------------------------
 			% Function to grid one meshgrid to another.
