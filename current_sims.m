@@ -269,21 +269,41 @@ pacmed_NYF4 = tmp; clear tmp
 simslist{simscnt} = ['pacmed_VKV4_TUNE2']; simscnt = simscnt + 1;
 tmp.r_tag         = ['pacmed_0p25']; % simulation
 tmp.vers          = ['dccoy_VKV4_tune2']; % version
-tmp.year          = [2009];
+tmp.year          = [2004];
 tmp.ext           = [num2str(tmp.year)]; 
 tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
 tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
 tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
 
 % region info (indices)
-tmp.rlati  = [101 251];
-tmp.rloni  = [251 751];
-tmp.rdepi  = [-100 inf];
+tmp.rlati  = [];
+tmp.rloni  = [];
+tmp.rdepi  = [];
 tmp.rcoast = [];
 
 % rename and save
 pacmed_VKV4_TUNE2 = tmp; clear tmp
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pacmed_0p25 VKV4_TUNE2_JI_TEST (double Ji parameters from VKV4_TUNE2)
+% meta info
+simslist{simscnt} = ['pacmed_VKV4_TUNE2_JI_TEST']; simscnt = simscnt + 1;
+tmp.r_tag         = ['pacmed_0p25']; % simulation
+tmp.vers          = ['dccoy_VKV4_tune2_Ji_test']; % version
+tmp.year          = [2004];
+tmp.ext           = [num2str(tmp.year)]; 
+tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
+
+% region info (indices)
+tmp.rlati  = [];
+tmp.rloni  = [];
+tmp.rdepi  = [];
+tmp.rcoast = [];
+
+% rename and save
+pacmed_VKV4_TUNE2_JI_TEST = tmp; clear tmp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % pacmed_0p25 10 year spinup
 % meta info
@@ -318,13 +338,34 @@ tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
 tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
 
 % region info (indices)
-tmp.rlati  = [101 251];
-tmp.rloni  = [251 751];
-tmp.rdepi  = [-100 inf];
+tmp.rlati  = [];%[101 251];
+tmp.rloni  = [];%[251 751];
+tmp.rdepi  = []; %[-100 inf];
 tmp.rcoast = [];
 
 % rename and save
 pacmed_PDAMIEN_VKV4_TUNE2 = tmp; clear tmp
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pacmed_0p25 VKV4_TUNE3 
+% meta info
+simslist{simscnt} = ['pacmed_VKV4_TUNE3']; simscnt = simscnt + 1;
+tmp.r_tag         = ['pacmed_0p25']; % simulation
+tmp.vers          = ['dccoy_VKV4_tune3']; % version
+tmp.year          = [2009];
+tmp.ext           = [num2str(tmp.year)]; 
+tmp.simPath       = ['/data/project2/model_output/',tmp.r_tag,'/',[tmp.r_tag,'_',tmp.vers,'/']];
+tmp.avgfile       = ['avg_',tmp.ext,'.nc']; % file to diagnose
+tmp.gfile         = ['/data/project2/model_output/pacmed_0p25/grid/pacmed_0p25_grd_corrected.nc'];
+
+% region info (indices)
+tmp.rlati  = [];%[101 251];
+tmp.rloni  = [];%[251 751];
+tmp.rdepi  = []; %[-100 inf];
+tmp.rcoast = [];
+
+% rename and save
+pacmed_VKV4_TUNE3 = tmp; clear tmp
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% USNW 1km PRODUCTS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
