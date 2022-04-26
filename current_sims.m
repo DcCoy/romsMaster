@@ -21,8 +21,10 @@ RMdir = '/data/project1/demccoy/ROMS/';
 % - initiate simslist
 simslist = []; simscnt = [1];
 
-% - default simulation
-default_sim = {'peru_VKV4_TUNE2_SPINUP'};
+% - set default simulation(s) for those with multiple solutions
+default_sim    = {'peru_VKV4_TUNE2_SPINUP'};
+default_peru   = {'peru_VKV4_TUNE2_SPINUP'};
+default_pacmed = {'pacmed_VKV4_TUNE3'};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PERU 10km PRODUCTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -398,7 +400,11 @@ USNW1 = tmp; clear tmp
 
 % Also save default sim
 eval(['default = ',default_sim{1},';']);
+eval(['peru = ',default_peru{1},';']);
+eval(['pacmed = ',default_pacmed{1},';']);
 simslist{end+1} = 'default';
+simslist{end+1} = 'peru';
+simslist{end+1} = 'pacmed';
 
 % Save
 save([RMdir,'current_sims.mat'],simslist{:})

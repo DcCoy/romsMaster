@@ -200,9 +200,9 @@ if plots(pltcnt).choice;
 			if A.comp > 0
 				continue
 			end
-			romsdat = nanmean(obj(j).romsData.(vars{i}).slice,3);
-			diagdat = nanmean(obj(1).diagData.(vars{i}).slice,3);
-			[figs,cbs] = sliceCmp(obj(j),romsdat,diagdat,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
+			romsdat = obj(j).romsData.(vars{i}).slice;
+			diagdat = obj(1).diagData.(vars{i}).slice;
+			[figs,cbs] = sliceCmp(obj(j),romsdat,diagdat,0,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
 				'figdim',0.5,'levels',levs{i},'difflevels',dlevs{i});
 			% ROMS figure
 			set(0,'CurrentFigure',figs(1));
@@ -224,9 +224,9 @@ if plots(pltcnt).choice;
 			close(figs(3))
 		end
 		if length(obj)==2
-			roms1dat = nanmean(obj(1).romsData.(vars{i}).slice,3);
-			roms2dat = nanmean(obj(2).romsData.(vars{i}).slice,3);
-			[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
+			roms1dat = obj(1).romsData.(vars{i}).slice;
+			roms2dat = obj(2).romsData.(vars{i}).slice;
+			[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
 				'figdim',0.5,'levels',levs{i},'difflevels',dlevs{i});
 			close(figs(1));
 			close(figs(2));
@@ -350,9 +350,9 @@ if plots(pltcnt).choice;
 					continue
 				end
 				% Grab data
-				romsdat = nanmean(squeeze(obj(k).romsData.(vars{i}).slice(:,:,:,j)),3);
-				diagdat = nanmean(squeeze(obj(1).diagData.(vars{i}).slice(:,:,:,j)),3); 
-				[figs,cbs] = sliceCmp(obj(k),romsdat,diagdat,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
+				romsdat = obj(k).romsData.(vars{i}).slice;
+				diagdat = obj(1).diagData.(vars{i}).slice;
+				[figs,cbs] = sliceCmp(obj(k),romsdat,diagdat,0,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
 					'figdim',0.5,'slice',j,'levels',levs{i,j},'difflevels',dlevs{i});
 				% ROMS figure
 				set(0,'CurrentFigure',figs(1));
@@ -375,9 +375,9 @@ if plots(pltcnt).choice;
 			end
 			if length(obj)==2
 				% Grab data
-				roms1dat = nanmean(squeeze(obj(1).romsData.(vars{i}).slice(:,:,:,j)),3);
-				roms2dat = nanmean(squeeze(obj(2).romsData.(vars{i}).slice(:,:,:,j)),3);
-				[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
+				roms1dat = squeeze(obj(1).romsData.(vars{i}).slice(:,:,:,j));
+				roms2dat = squeeze(obj(2).romsData.(vars{i}).slice(:,:,:,j));
+				[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
 					'figdim',0.5,'slice',j,'levels',levs{i,j},'difflevels',dlevs{i});
 				close(figs(1));
 				close(figs(2));
@@ -419,7 +419,7 @@ if plots(pltcnt).choice;
 		end
 		diagdat = obj(i).diagData.u.slice;
 		romsdat = nanmean(obj(i).romsData.u.slice,3);
-		[figs,cbs] = sliceCmp(obj(i),romsdat,diagdat,'zlims',zlims,'xlims',xlims,...
+		[figs,cbs] = sliceCmp(obj(i),romsdat,diagdat,1,'zlims',zlims,'xlims',xlims,...
 			'figdim',0.5,'cmap','balance','levels',levs{1},'difflevels',dlevs{1});
 		% ROMS figure
 		set(0,'CurrentFigure',figs(1));
@@ -441,9 +441,9 @@ if plots(pltcnt).choice;
 		close(figs(3))
 	end
 	if length(obj)==2
-		roms1dat = nanmean(obj(1).romsData.u.slice,3);
-		roms2dat = nanmean(obj(2).romsData.u.slice,3);
-		[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,'zlims',zlims,'xlims',xlims,...
+		roms1dat = obj(1).romsData.u.slice;
+		roms2dat = obj(2).romsData.u.slice;
+		[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'zlims',zlims,'xlims',xlims,...
 			'figdim',0.5,'cmap','balance','levels',levs{1},'difflevels',dlevs{1});
 		close(figs(1));
 		close(figs(2));
@@ -568,9 +568,9 @@ if plots(pltcnt).choice;
 			if A.comp > 0
 				continue
 			end
-			romsdat = nanmean(obj(j).romsData.(vars{i}).slice,3);
-			diagdat = nanmean(obj(1).diagData.(vars{i}).slice,3);
-			[figs,cbs] = sliceCmp(obj(j),romsdat,diagdat,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
+			romsdat = obj(j).romsData.(vars{i}).slice;
+			diagdat = obj(1).diagData.(vars{i}).slice;
+			[figs,cbs] = sliceCmp(obj(j),romsdat,diagdat,0,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
 				'figdim',0.5,'bal',bal(i),'levels',levs{i},'difflevels',dlevs{i});
 			% ROMS figure
 			set(0,'CurrentFigure',figs(1));
@@ -592,9 +592,9 @@ if plots(pltcnt).choice;
 			close(figs(3))
 		end
 		if length(obj)==2
-			roms1dat = nanmean(obj(1).romsData.(vars{i}).slice,3);
-			roms2dat = nanmean(obj(2).romsData.(vars{i}).slice,3);
-			[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
+			roms1dat = obj(1).romsData.(vars{i}).slice;
+			roms2dat = obj(2).romsData.(vars{i}).slice;
+			[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'cmap',cmaps{i},'xlims',xlims,'zlims',zlims,...
 				'figdim',0.5,'bal',bal(i),'levels',levs{i},'difflevels',dlevs{i});
 			close(figs(1))
 			close(figs(2))
@@ -714,9 +714,9 @@ if plots(pltcnt).choice;
 					continue
 				end
 				% Grab data
-				romsdat = nanmean(squeeze(obj(k).romsData.(vars{i}).slice(:,:,:,j)),3);
-				diagdat = nanmean(squeeze(obj(1).diagData.(vars{i}).slice(:,:,:,j)),3);
-				[figs,cbs] = sliceCmp(obj(k),romsdat,diagdat,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
+				romsdat = obj(k).romsData.(vars{i}).slice;
+				diagdat = obj(1).diagData.(vars{i}).slice;
+				[figs,cbs] = sliceCmp(obj(k),romsdat,diagdat,0,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
 					'figdim',0.5,'slice',j,'bal',bal(i),'levels',levs{i,j},'difflevels',dlevs{i});
 				% ROMS figure
 				set(0,'CurrentFigure',figs(1));
@@ -739,9 +739,9 @@ if plots(pltcnt).choice;
 			end
 			if length(obj)==2
 				% Grab data
-				roms1dat = nanmean(squeeze(obj(1).romsData.(vars{i}).slice(:,:,:,j)),3);
-				roms2dat = nanmean(squeeze(obj(2).romsData.(vars{i}).slice(:,:,:,j)),3);
-				[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
+				roms1dat = squeeze(obj(1).romsData.(vars{i}).slice(:,:,:,j));
+				roms2dat = squeeze(obj(2).romsData.(vars{i}).slice(:,:,:,j));
+				[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'cmap',cmaps{i},'zlims',zlims,'xlims',xlims(j,:),...
 					'figdim',0.5,'slice',j,'bal',bal(i),'levels',levs{i,j},'difflevels',dlevs{i});
 				close(figs(1))
 				close(figs(2))
@@ -860,7 +860,7 @@ if plots(pltcnt).choice;
 	end
     % Get OMZ thickness
 	for i = 1:length(obj)
-		obj(i) = OMZthick(obj(i),omzthresh);
+		obj(i) = OMZthick(obj(i),omzthresh,1);
 	end
     % Make comparison plots
 	for i = 1:length(obj(1).diagData.OMZ);
@@ -870,8 +870,8 @@ if plots(pltcnt).choice;
 				if A.comp > 0
 					continue
 				end
-				romsdat = squeeze(obj(k).romsData.OMZ.data(:,:,j));
-				diagdat = squeeze(obj(k).diagData.OMZ(i).data(:,:,j));
+				romsdat = nanmean(squeeze(obj(k).romsData.OMZ.int(:,:,:,j)),3);
+				diagdat = squeeze(obj(k).diagData.OMZ(i).int(:,:,j));
 				[figs,cbs] = mapCmp(obj(k),romsdat,diagdat,'levels',levs{j},'difflevels',dlevs{j});
 				% ROMS figure
 				set(0,'CurrentFigure',figs(1));
@@ -896,8 +896,8 @@ if plots(pltcnt).choice;
 	end
 	if length(obj)==2
 		for j = 1:length(omzthresh)
-			roms1dat = squeeze(obj(1).romsData.OMZ.data(:,:,j));
-			roms2dat = squeeze(obj(2).romsData.OMZ.data(:,:,j));
+			roms1dat = squeeze(obj(1).romsData.OMZ.int(:,:,j));
+			roms2dat = squeeze(obj(2).romsData.OMZ.int(:,:,j));
 			[figs,cbs] = mapCmp(obj(1),roms1dat,roms2dat,'levels',levs{j},'difflevels',dlevs{j});
 			close(figs(1));
 			close(figs(2));
@@ -928,18 +928,20 @@ if plots(pltcnt).choice;
 			eval([tmpfields{i},'=A.(tmpfields{i});']);
 		end
 	end
-    for i = 1:length(vars);
-        if ~opt(i)
-            disp(['...skipping ',vars{i},'...']);
-            continue
-        end
-		% Call obs_vs_roms
-		for j = 1:length(obs_regions)
-			[fig] = obs_vs_roms(obj,vars(i),obs_regions{j},roms_regions{j});
-			suptitle([vars{i},': region ',num2str(j)]);
-			export_fig('-pdf',[obj(1).paths.plots.diag,vars{i},'_prof_region_',num2str(j)]);
-			close all
-		end
+	% Reduce inputs?
+	vars = vars(opt==1);
+	units = units(opt==1);
+	xlims = xlims(opt==1);
+	% Call data_locations
+	fig = data_locations(obj,obs_regions,roms_regions);
+	export_fig('-pdf',[obj(1).paths.plots.diag,'prof_data_locations']);
+	% Call obs_vs_roms
+	for i = 1:length(obs_regions)
+		disp(['Region ',num2str(i)])
+		[fig] = obs_vs_roms(obj,vars,obs_regions{i},roms_regions{i},xlims,units);
+		suptitle(['Region ',num2str(i)]);
+		export_fig('-pdf',[obj(1).paths.plots.diag,'prof_region_',num2str(i)]);
+		close all
 	end
 end
 
@@ -989,3 +991,4 @@ if plots(pltcnt).choice;
 	end
 	clearvars -except obj A varargin plots pltcnt
 end
+
