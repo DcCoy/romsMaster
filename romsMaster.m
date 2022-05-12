@@ -5,7 +5,7 @@ classdef romsMaster
 % comparison figures against validation data, and many
 % other actions.
 %
-% To begin, simply initialize romsMaster using 'sim' from current_sims.mat
+% To begin, simply initialize romsMaster
 % - obj = initROMS(romsMaster,sim)
 %
 % To view available routines
@@ -33,17 +33,17 @@ classdef romsMaster
 			% Initialization method: gathers paths and coordinate variables 
 			%
 			% Usage: 
-			% - obj = init(obj,sim)
+			% - obj = initROMS(obj,sim)
 			% 
 			% Inputs:
 			% - simName: ROMS simulation (peru_chile_0p1, peru_chile_0p05, or pacmed_0p25 only)
 			%
 			% Optional Inputs:
 			% - runName: Simulation name (i.e. spinup, VKV4, specific runs)
-			% - region:  'full' will override default region in current_sims.mat
-			%            'manual' will not auto-run defineRegion (do it after calling init(obj,...))
-			%            'default' will use default region in current_sims.mat
-			% - runYear: override the default year (set in current_sims.m)
+			% - region:  'full' will override default region 
+			%            'manual' will not auto-run defineRegion (do it after calling initROMS(obj,...))
+			%            'default' will use default region 
+			% - runYear: override the default year
 			%
 			% Example:
 			% - obj = initROMS(obj,'peru_chile_0p1','runName','VKV4_tune2')         <-- if obj defined
@@ -164,7 +164,7 @@ classdef romsMaster
 
 			% Get paths for diagnostic products
 			obj = initDiag(obj);
-		end % end methods init
+		end % end methods initROMS
 
 		%--------------------------------------------------------------------------------
 		function [obj] = loadGrid(obj)
@@ -172,7 +172,7 @@ classdef romsMaster
 			% Loads grid information into obj.grid
 			%
 			% NOTE:
-			% Also loads z_r, z_w, Hz, so obj.paths.avg needs to be called (see init)
+			% Also loads z_r, z_w, Hz, so obj.paths.avg needs to be called (see initROMS)
 			% ----------------------
 
 			rmpath('/data/project1/demccoy/ROMS/ROMS_tools/nc_tools/');
@@ -598,7 +598,7 @@ classdef romsMaster
 			% - obj = defineRegion(obj,'lon_lim',[200 400],'lat_lim',[200 400],'dep_lim',[-600 0])
 			%   or simply...
 			% - obj = defineRegion(obj)
-			%   ...to use defaults defined in 'current_sims.m'
+			%   ...to use defaults defined in 'initROMS'
 			% ----------------------
 
 			disp('---------------------------------');
@@ -613,7 +613,7 @@ classdef romsMaster
 			A           = parse_pv_pairs(A,varargin);
 
 			% Process inputs
-			% Use defaults (current_sims.m)  if calling defineRegion without inputs
+			% Use defaults (initROMS)  if calling defineRegion without inputs
 			if ~isempty(A.lon_lim)
 				obj.region.lon_lim = [A.lon_lim];
 			elseif isempty(obj.region.lon_lim)
@@ -713,7 +713,7 @@ classdef romsMaster
 					mask_rhoz3d(:,:,z) = obj.region.mask_rho;
 				end
 			end
-			obj.region.mask_rhoz3d = repmat(mask_rhoz3d,[1 1 1 12]);
+			obj.region.mask_rhoz3d = repmat(mask_rhoz3d,[1 1 1 obj.region.nt]);
 			
 			% Get cell volume
 			obj.region.volume = obj.region.area3d .* obj.region.Hz;
@@ -767,7 +767,7 @@ classdef romsMaster
 
 			% Initialize?
 			if isempty(obj.grid)
-				disp('Initialize routine first (init)')
+				disp('Initialize routine first (initROMS)')
 				return
 			end
 			if ~isfield(obj.region,'mask_rho3d') 
@@ -1548,6 +1548,9 @@ classdef romsMaster
 			%   plot1D(obj,'vars',{'NO2','N2O'},'time',1:12,'lon',200,'lat',0)
 			% ------------------
 
+			disp('UPDATE FOR VARIABLE NT');
+			return
+
 			% Defaults for optional  arguments
 			A.time  = [];
 			A.lon   = [];
@@ -1591,6 +1594,7 @@ classdef romsMaster
 				tstr = {'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'};
 			elseif obj.region.nt == 12 & length(A.time) < 12
 				ttstr = [];
+				tstr = {'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'};
 				for i = 1:length(A.time)
 					if i == 1
 						ttstr = [tstr{A.time(i)}];
@@ -1678,7 +1682,7 @@ classdef romsMaster
 			% -------------------
 			
 			% check that object is initialized
-			try; x = obj.info.var3d; catch; obj = init(obj); end
+			try; x = obj.info.var3d; catch; obj = initROMS(obj); end
 
 			% temperature
 			obj.paths.diag.temp.file  = {'/data/project3/data/woa18/temperature/0p25/temp_woa18_clim.nc'};
@@ -2221,367 +2225,6 @@ classdef romsMaster
 				end
 			end
 		end % end methods getAvgData	
-
-		%--------------------------------------------------------------------------------
-		function [fig,ax,cb] = plotData(obj,varargin)
-			% -------------------
-			% Plot ROMS data maps based on inputs.
-			% If choosing both 2D and 3D, note that depth inputs will only be applied
-			% to 3D data, as expected.
-			%
-			% Usage:
-			% - [fig,ax,cb] = plotData(obj,varargin)
-			% 
-			% Inputs (varargin):
-			% - (empty) = plot loaded data or select ROMS variables			
-			% - vars    = ROMS variable to plot, as a string or cell array
-			% - depths  = Depths to plot (see obj.grid.z_avg_dep for list of available depths)
-			%             Will use nearest depth when necessary
-			% - levels  = Levels to plot (if using terrain-following data)
-			%             Cannot be used with 'depths' input
-			% - time    = cell array of times to plot
-			%             'DJF','MAM','JJA','SON','ANN',or 3-letter month name (Dec, Jan, etc)
-			%		      i.e. {'DJF','MAM','JJA','SON'} for seasonal plots
-			% - conv    = array of length(vars) to apply conversion factors
-			% - plttype = none (default), tmpfigs, or define file type ('png' or 'pdf');
-			%
-			% Outputs:
-			% - fig = figure handle(s)
-			% - ax  = axes handle(s)
-			% - cb  = colorbar handle(s)
-			%
-			% Examples:
-			% - obj          = plotData(obj)
-			% - [fig,ax,cb]  = plotData(obj,'vars',{'temp','salt'},'depths',[100 500 1000],'time',{'DJF'},'plttype','png');
-			% -------------------
-
-			close all
-
-			% defaults for optional  arguments
-			A.vars     = []; % input variable
-			A.plttype  = []; % plot type, tmpfig by default
-			A.depths   = []; % depths to plot
-			A.levels   = []; % levels to plot
-			A.time     = []; % time averaging or month to plot
-			A.conv     = []; % optional conversion factors
-			A.caxis    = []; % optional caxis input (not recommended)
-			A          = parse_pv_pairs(A,varargin); % parse method arguments to A
-
-			% month string
-			mstr = {'Jan','Feb','Mar','Apr','Jun','Jul','Aug','Sep','Oct','Nov','Dec'};
-
-			% depth and level indexes
-			lidx = []; didx = [];
-
-			% check that object is initialized
-			try; x = obj.info.var3d; catch; obj = init(obj); end
-
-			% check inputs
-			if ~isempty(A.vars) % vars
-				for i = 1:length(A.vars)
-					if ~iscell(A.vars(i));
-						disp(' ');
-						disp('vars must be a cell array');
-						disp(' '); return
-					end
-					if ~ismember(A.vars(i),obj.info.var3d) & ~ismember(A.vars(i),obj.info.var2d)
-						disp(' ');
-						disp([A.vars{i},'does not exist']);
-						disp(' '); return
-					end
-				end
-			end
-			if ~isempty(A.plttype) % plttype
-				if ~strcmp(A.plttype,'tmpfigs') & ~strcmp(A.plttype,'png') & ~strcmp(A.plttype,'pdf') 
-					disp(' ');
-					disp('plttype must be: tmpfigs, png, pdf');
-					disp(' '); return
-				end
-			end
-			if ~isempty(A.depths) & isempty(A.levels) % depths
-				for i = 1:length(A.depths)
-					if A.depths(i) < 0 & A.depths(i) > max(obj.grid.z_avg_dep)
-						disp(' ');
-						disp(['depths must be positive and less than ',num2str(max(obj.grid.z_avg_dep))]);
-						disp(' '); return
-					end
-				end
-			elseif isempty(A.depths) & ~isempty(A.levels) % levels
-				for i = 1:length(A.levels)
-					if A.levels(i) <0 & A.levels(i) > obj.region.nz;
-						disp(' ');
-						disp(['levels must be positive and less than ',num2str(obj.region.nz)]);
-						disp(' '); return
-					end
-				end
-			elseif ~isempty(A.depths) & ~isempty(A.levels)
-				disp(' ');
-				disp('Cannot process both depths and levels, type help obj.plotData');
-				disp(' '); return
-			end
-			if ~isempty(A.time) & obj.region.nt == 12 % time
-				for i = 1:length(A.time)
-					if ismember(A.time(i),{'DJF','MAM','JJA','SON','ANN'}) | ismember(A.time(i),mstr);
-					else
-						disp(' ');
-						disp('time must be DJF, MAM, JJA, SON, ANN, or a 3-letter month cell string');
-						disp(' '); return
-					end
-				end
-			elseif ~isempty(A.time)
-				for i = 1:length(A.time)
-					if A.time(i) > obj.region.nt
-						disp(' ');
-						disp('time input is greater than number of records');
-						disp(' '); return
-					end
-				end
-			end
-			if isempty(A.conv)
-				A.conv = ones(length(A.vars));
-			else
-			end
-
-			% process depth input
-			if ~isempty(A.depths)
-				for i = 1:length(A.depths)
-					diffd       = abs(A.depths(i) - obj.grid.z_avg_dep);
-					ind         = find(diffd == min(diffd));
-					didx(i)     = ind;
-					dstr{i}     = [num2str(obj.grid.z_avg_dep(ind)),'m'];
-				end
-			end
-
-			% process levels input
-			if ~isempty(A.levels)
-				lidx = A.levels;
-				for i = 1:length(lidx)
-					lstr{i} = ['Level ',num2str(lidx(i))];
-				end
-			end
-			
-			% if depth/levels empty, choose
-			if isempty(A.depths) & isempty(A.levels)
-				q0 = input('---------------------------\nSurface(0), Depths(1), or Levels(2):\n---------------------------\n>> ');
-				if ~ismember(q0,[0 1 2]);
-					disp(' ');
-					disp('Value must be 0, 1, or 2');
-					disp(' '); return
-				elseif q0 == 0
-					didx = [];
-					lidx = [];
-				elseif q0 == 1
-					lidx = [];
-						disp('-------------------------');
-						disp('z_avg Depths:');
-					for i = 1:length(obj.grid.z_avg_dep)
-						if i < 10
-							disp([num2str(i),'   == ',num2str(obj.grid.z_avg_dep(i)),'m']);
-						elseif i < 100
-							disp([num2str(i),'  == ', num2str(obj.grid.z_avg_dep(i)),'m']);
-						else
-							disp([num2str(i),' == ',  num2str(obj.grid.z_avg_dep(i)),'m']);
-						end
-					end
-					didx = input('---------------------------\nChoose depth(s):\n---------------------------\n>> ');
-					for i = 1:length(didx)
-						if ~ismember(didx(i),[1:length(obj.grid.z_avg_dep)]);
-							disp(' ');
-							disp('Bad Choice, number out of range');
-							disp(' '); return		
-						else
-							dstr{i} = [num2str(obj.grid.z_avg_dep(didx(i))),'m'];
-						end
-					end	
-				elseif q0 == 2
-					didx = [];
-					disp('-------------------------');
-					disp(['Number of levels = ',num2str(obj.region.nz)]);
-					lidx = input('---------------------------\nChoose level(s):\n---------------------------\n>> ');
-					for i = 1:length(lidx)
-						if ~ismember(tidx(i),[1:length(obj.region.nz)]);
-							disp(' ');
-							disp('Bad Choice, number out of range');
-							disp(' '); return		
-						else
-							lstr{i} = ['Level ',num2str(lidx(i))];
-						end
-					end
-				end
-			end
-
-			% process variable input
-			if ~isempty(A.vars) % user provided input
-				for i = 1:length(A.vars)
-					if isempty(didx) & isempty(lidx)
-						obj = loadData(obj,A.vars(i),'type','raw');
-					elseif isempty(didx)
-						obj = loadData(obj,A.vars(i),'type','raw');
-					elseif isempty(lidx)
-						obj = loadData(obj,A.vars(i),'type','z_avg');
-					end
-				end
-			else % no user input
-				if isempty(didx)
-					obj    = loadData(obj,'type','raw');
-				else
-					obj    = loadData(obj,'type','z_avg');
-				end
-				A.vars = fieldnames(obj.romsData);
-			end
-
-			% process time input
-			if isempty(A.time) & obj.region.nt == 12
-					disp('-------------------------');
-				disp('DJF, MAM, JJA, SON, ANN, or ');
-				disp('3-letter month string cell array');
-				A.time = input('---------------------------\nChoose time(s):\n---------------------------\n>> ');
-				for i = 1:length(A.time)
-					if ismember(A.time(i),{'DJF','MAM','JJA','SON','ANN'}) | ismember(A.time(i),mstr);
-					else
-						disp(' ');
-						disp('time must be DJF, MAM, JJA, SON, ANN, or a 3-letter month cell string');
-						disp(' '); return
-					end
-					if strcmp(A.time(i),'DJF');
-						tidx{i} = [1 2 12];
-						tstr{i} = 'DJF';
-					elseif strcmp(A.time(i),'MAM');
-						tidx{i} = [3:5];
-						tstr{i} = 'MAM';
-					elseif strcmp(A.time(i),'JJA');
-						tidx{i} = [6:8];
-						tstr{i} = 'JJA';
-					elseif strcmp(A.time(i),'SON');
-						tidx{i} = [9:11];
-						tstr{i} = 'SON';
-					elseif strcmp(A.time(i),'ANN');
-						tidx{i} = [1:12];
-						tstr{i} = 'Annual';
-					elseif ismember(A.time(i),mstr)
-						tidx{i} = find(strcmp(mstr,A.time(i))==1);
-						tstr{i} = mstr{i};
-					end
-				end
-			elseif isempty(A.time) 
-				for i = 1:length(A.time)
-					tidx{i} = A.time(i);
-					tstr{i} = ['Record ',num2str(A.time(i))];
-				end
-			elseif ~isempty(A.time)
-				for i = 1:length(A.time)
-					if strcmp(A.time(i),'DJF');
-						tidx{i} = [1 2 12];
-						tstr{i} = 'DJF';
-					elseif strcmp(A.time(i),'MAM');
-						tidx{i} = [3:5];
-						tstr{i} = 'MAM';
-					elseif strcmp(A.time(i),'JJA');
-						tidx{i} = [6:8];
-						tstr{i} = 'JJA';
-					elseif strcmp(A.time(i),'SON');
-						tidx{i} = [9:11];
-						tstr{i} = 'SON';
-					elseif strcmp(A.time(i),'ANN');
-						tidx{i} = [1:12];
-						tstr{i} = 'Annual';
-					elseif ismember(A.time(i),mstr)
-						tidx{i} = find(strcmp(mstr,A.time(i))==1);
-						tstr{i} = mstr{i};
-					elseif A.time(i) <= obj.region.nt
-						tidx{i} = A.time(i);
-						tstr{i} = ['Record ',num2str(A.time(i))]; 
-					end
-				end
-			end
-
-			% get lonbounds/latbounds		
-			lonbounds = [floor(obj.region.minlon_rho) ceil(obj.region.maxlon_rho)];
-			latbounds = [floor(obj.region.minlat_rho) ceil(obj.region.maxlat_rho)];
-			
-			% get levels or depths
-			if isempty(lidx) & ~isempty(didx)
-				zidx = didx; zstr = dstr;
-			elseif isempty(didx) & ~isempty(lidx)
-				zidx = lidx; zstr = lstr;
-			else
-				zidx = [0]; zstr = {'SFC'};
-			end
-			
-			% make plot for each variable, depth, and time combo
-			pcnt = [0];
-			for i = 1:length(A.vars)
-				for j = 1:length(zidx)
-					for k = 1:length(A.time);
-						try % 3D
-							data = squeeze(obj.romsData.(A.vars{i}).data(:,:,zidx(j),tidx{k}));
-						catch % 2D
-							data = squeeze(obj.romsData.(A.vars{i}).data(:,:,tidx{k}));
-						end
-						
-						% apply averaging
-						data = nanmean(data,3);
-	
-						% apply conversion 
-						data = data .* A.conv(i);
-
-						% mask coast
-						data = data .* obj.region.mask_rho;
-
-						% colorbar limits
-						if ~isempty(A.caxis)
-							datarng = [A.caxis(1) A.caxis(2)];
-						else
-							datarng = prctile(data(:),[1 99]);
-						end
-						[axisLims axisTicks]   = romsMaster.oom_levs(datarng);	
-						lvls                   = [axisLims(1):(diff(axisLims)/255):axisLims(2)];	
-						data(data>axisLims(2)) = axisLims(2);
-						data(data<axisLims(1)) = axisLims(1);
-						
-						% initiate figure
-						fig(i,j,k)            = piofigs('lfig',1);
-						set(0,'CurrentFigure',fig(i,j,k));
-						[ax(i,j,k)] = map_plot(fig(i,j,k),obj.region.lon_rho,obj.region.lat_rho);
-						m_contourf(obj.region.lon_rho,obj.region.lat_rho,data,lvls,'LineStyle','none');
-						cb(i,j,k)   = colorbar;
-						title([tstr{k},' ',obj.romsData.(A.vars{i}).name,' @ ',zstr{j}]);
-						ylabel(cb(i,j,k),obj.romsData.(A.vars{i}).units);
-	
-						% axis limits
-						cb(i,j,k).XLim		 = axisLims;
-						cb(i,j,k).XTick      = axisTicks;
-						cb(i,j,k).XTickLabel = axisTicks;
-						caxis([axisLims]);
-					
-						% save
-						if isempty(A.plttype)
-							pcnt = pcnt+1;
-							pltjpg(pcnt);
-						elseif strcmp(A.plttype,'tmpfigs')
-							if i == 1 & j == 1 & k == 1
-								pltshow('mode',1);
-								pltshow;
-							else
-								pltshow;
-							end
-						elseif zidx > 0
-							fdir  = obj.paths.plots.roms.zsurfacefigs;
-							fname = [tstr{k},'_',A.vars{i},'_',zstr{j}];
-							disp([fdir,fname])
-							export_fig([fdir,fname],['-',A.plttype],'-p0.05'); 
-						else
-							fdir = obj.paths.plots.roms.surfacefigs;
-							fname = [tstr{k},'_',A.vars{i},'_',zstr{j}];
-							disp([fdir,fname])
-							export_fig([fdir,fname],['-',A.plttype],'-p0.05'); 
-						end	
-						
-						% rinse and repeat
-					end
-				end
-			end
-		end % end methods plotData
 	
 		%--------------------------------------------------------------------------------
 		function obj = sliceROMS(obj,vars,choice,deg,varargin);
