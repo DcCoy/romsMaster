@@ -6,7 +6,7 @@ classdef romsMaster
 % other actions.
 %
 % To begin, simply initialize romsMaster using 'sim' from current_sims.mat
-% - obj = init(romsMaster,sim)
+% - obj = initROMS(romsMaster,sim)
 %
 % To view available routines
 % - methods(obj)
@@ -28,25 +28,26 @@ classdef romsMaster
 	%----------------------------------------------------------------------------------------
 	methods
 		%--------------------------------------------------------------------------------
-		function obj = init(obj,sim,varargin)
+		function obj = initROMS(obj,simName,varargin)
 			% -------------------
 			% Initialization method: gathers paths and coordinate variables 
 			%
 			% Usage: 
 			% - obj = init(obj,sim)
-			%
+			% 
 			% Inputs:
-			% - sim = ROMS simulation (peru or pacmed only)
+			% - simName: ROMS simulation (peru_chile_0p1, peru_chile_0p05, or pacmed_0p25 only)
 			%
 			% Optional Inputs:
-			% - region = 'full' will override default region in current_sims.mat
+			% - runName: Simulation name (i.e. spinup, VKV4, specific runs)
+			% - region:  'full' will override default region in current_sims.mat
 			%            'manual' will not auto-run defineRegion (do it after calling init(obj,...))
 			%            'default' will use default region in current_sims.mat
-			% - year   = override the default year (set in current_sims.m)
+			% - runYear: override the default year (set in current_sims.m)
 			%
 			% Example:
-			% - obj = init(obj,'peru')         <-- if obj defined
-			% - obj = init(romsMaster,'peru')  <-- if obj undefined
+			% - obj = initROMS(obj,'peru_chile_0p1','runName','VKV4_tune2')         <-- if obj defined
+			% - obj = initROMS(romsMaster,'peru_chile_0p1','runName','VKV4_tune2')  <-- if obj undefined
 			% -------------------
 			
 			%  Begin
@@ -58,96 +59,108 @@ classdef romsMaster
 			disp('---------------------------------');
 			disp(' ');               	
 
-			%  Input test
-			if nargin < 2
-				% Load default settings
-				sim = 'default';	
-				A.region = 'full';
-				A.year   = [];
-			elseif nargin < 3
-				% Load full domain
-				A.region = 'full';
-				A.year   = [];
-			else
-				% Optional inputs...
-				A.region = ['default'];
-				A.year   = [];
-				A        = parse_pv_pairs(A,varargin);
-			end
- 
 			% Suppress warning messages and addpath to Danny's scripts
 			warning off
 			addpath /data/project1/demccoy/matlab_scripts/
 			addpath /data/project1/demccoy/ROMS/tools/Roms_tools_MF/Preprocessing_tools/
-			
-			% Run current_sims
-			current_sims;
-			
-			% Load simulation
-			load('current_sims.mat',sim);	
-			eval(['unpactStruct(',sim,');']);
 
-			% override year?
-			if ~isempty(A.year)
-				avgfile = ['avg_',num2str(A.year),'.nc'];
-				ext     = [num2str(A.year)];
-				year    = A.year;
+			% Options	
+			%  Defaults
+			default_settings = 0;
+			if nargin < 2
+				% Load default settings
+				default_settings = 1;
+				simName    = 'peru_chile_0p1';	
+				A.runName  = 'VKV4_tune2_spinup';
+				A.region   = 'off';
+				A.runYear  = [2049];
+				A.gridName = [A.runName,'_grd.nc'];
+				A.rlati    = [];
+				A.rloni    = [];
+				A.rdepi    = [];
+				A.rcoast   = [];
 			end
+			% Other run defaults
+			if ~default_settings
+				if strcmp(simName,'peru_chile_0p1')
+					A.runName  = 'dccoy_VKV4_tune2_spinup';
+					A.runYear  = 2049; 
+					A.region   = 'off';
+					A.gridName = [simName,'_grd.nc'];
+					A.rlati    = [301 461];
+					A.rloni    = [31  341];
+					A.rdepi    = [-750 inf];
+					A.rcoast   = [20];
+				elseif strcmp(simName,'peru_chile_0p05');
+					A.runName  = 'dccoy_VKV4_tune2';
+					A.runYear  = 2050; 
+					A.region   = 'off';
+					A.gridName = [simName,'_grd.nc']; 
+					A.rlati    = [];
+					A.rloni    = [];
+					A.rdepi    = [];
+					A.rcoast   = [];
+				elseif strcmp(simName,'pacmed_0p25');
+					A.runName  = 'dccoy_VKV4_tune3';
+					A.runYear  = 2009; 
+					A.region   = 'off';
+					A.gridName = [simName,'_grd_corrected.nc']; 
+					A.rlati    = [];
+					A.rloni    = [];
+					A.rdepi    = [];
+					A.rcoast   = [];
+				end
+			end
+			% Set default data to all
+			A = parse_pv_pairs(A,varargin);
 			
-			% grab paths according to inputs
-			obj.paths.simPath = simPath; % root path
-
-			% grab file paths
-			obj.paths.avg    = [obj.paths.simPath,'avg/',avgfile];
-			obj.paths.his    = [obj.paths.simPath,'his/','his_',ext,'.nc'];
-			obj.paths.flux   = [obj.paths.simPath,'phys_flux/','phys_flux_avg_',ext,'.nc'];
-			obj.paths.zavg 	 = [obj.paths.simPath,'z_avg/','z_',avgfile];
-			obj.paths.grid   = gfile;
+			% Set file paths
+			obj.paths.simPath = ['/data/project2/model_output/',simName,'/'];
+			obj.paths.runPath = [obj.paths.simPath,simName,'_',A.runName,'/'];
+			obj.paths.config  = ['/data/project2/demccoy/ROMS_configs/',simName,'/'];
+			obj.paths.grid    = [obj.paths.config,'grid/',A.gridName];
+			obj.paths.avg     = [obj.paths.runPath,'avg/avg_',num2str(A.runYear),'.nc'];
+			obj.paths.his     = [obj.paths.runPath,'his/his_',num2str(A.runYear),'.nc'];
+			obj.paths.zavg    = [obj.paths.runPath,'z_avg/z_avg_',num2str(A.runYear),'.nc'];
+			obj.paths.flux    = [obj.paths.runPath,'phys_flux/phys_flux_avg_',num2str(A.runYear),'.nc'];
 
 			% initiate directories if they dont exist
 			[pathstr, name, ext] = fileparts(obj.paths.avg);
-			mkdir([obj.paths.simPath,'Figures']);
-			mkdir([obj.paths.simPath,'Figures/',name,'/']);
-			mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
-			mkdir([obj.paths.simPath,'Figures/',name,'/Comparison']);
+			mkdir([obj.paths.runPath,'Figures']);
+			mkdir([obj.paths.runPath,'Figures/',name,'/']);
+			mkdir([obj.paths.runPath,'Figures/',name,'/Diagnostic']);
+			mkdir([obj.paths.runPath,'Figures/',name,'/Comparison']);
 		
 			% grab plot paths
-			obj.paths.plots.diag	= [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
-			obj.paths.plots.comp	= [obj.paths.simPath,'Figures/',name,'/Comparison/'];
+			obj.paths.plots.diag	= [obj.paths.runPath,'Figures/',name,'/Diagnostic/'];
+			obj.paths.plots.comp	= [obj.paths.runPath,'Figures/',name,'/Comparison/'];
 			obj.paths.plots.tmpfigs = ['/data/project1/demccoy/tmpfigs/'];
-
-			% Get info for ROMS variables
-			obj = romsInfo(obj,r_tag,year);
 			
+			% Get info for ROMS variables
+			obj.info = A;
+			obj.info.simName = simName;
+			obj = romsInfo(obj);
+		
 			% Load grid
 			obj = loadGrid(obj);
 
 			% make z_avg file if it doesn't exist
-			if exist([simPath,'z_avg/z_',avgfile]) ~= 2
+			if exist([obj.paths.zavg]) ~= 2
 				disp('---------------------------------');
 				disp('Create z_avg Climatology File');
 				disp('---------------------------------');
-				obj = make_zavg(obj,avgfile);
+				obj = make_zavg(obj);
 			end
-
-			% Save subregion indices
-			obj.region.lat_lim   = rlati;
-			obj.region.lon_lim   = rloni;
-			obj.region.dep_lim   = rdepi;
-			obj.region.coast_lim = rcoast;
 
 			% Grab subregion
-			if strcmp(A.region,'full')
-				lnl = [1 obj.grid.nx-1]; %-1 for x-advection
-				ltl = [1 obj.grid.ny-1]; %-1 for y-advection
-				cst = [-inf];
-				dpl = [-inf inf];
-				obj = defineRegion(obj,'lon_lim',[lnl],'lat_lim',[ltl],'dep_lim',[dpl],'coast_lim',[cst]);
-			elseif strcmp(A.region,'manual');
-				% Do nothing, user will define region
-			elseif strcmp(A.region,'default');
-				obj = defineRegion(obj);
+			if strcmp(A.region,'off')
+				A.rloni  = [1 obj.grid.nx-1]; %-1 for x-advection
+				A.rlati  = [1 obj.grid.ny-1]; %-1 for y-advection
+				A.rdepi  = [-inf inf];
+				A.rcoast = [-inf]; 
 			end
+			obj = defineRegion(obj,'lon_lim',[A.rloni],'lat_lim',[A.rlati],...
+								   'dep_lim',[A.rdepi],'coast_lim',[A.rcoast]);
 
 			% Get paths for diagnostic products
 			obj = initDiag(obj);
@@ -255,22 +268,23 @@ classdef romsMaster
 
 		end % end methods clearROMS
 		%--------------------------------------------------------------------------------
-		function [obj] = romsInfo(obj,r_tag,year)
+		function [obj] = romsInfo(obj)
 			% ----------------------
 			% Obtains info from roms file
 			%
 			% Usage:
-			% - [obj] = romsInfo(obj,r_tag,year) 
-			%
-			% Inputs:
-			% - r_tag = name of simulation (i.e. peru_chile_0p1)
-			% - year  = simulation year (i.e. 2000)
+			% - [obj] = romsInfo(obj) 
 			% ----------------------
 
 			rmpath /data/project1/demccoy/ROMS/ROMS_tools/nc_tools/
 
 			% list variables
-			obj.info = ncinfo(obj.paths.avg);
+			tmp.info = ncinfo(obj.paths.avg);
+			tmpfields = fields(obj.info);
+			for i = 1:length(tmpfields)
+				tmp.info.(tmpfields{i}) = obj.info.(tmpfields{i});
+			end
+			obj.info = tmp.info;
 			cnt2d = 1;
 			cnt3d = 1;
 			nt = obj.info.Dimensions(find(strcmp('time',{obj.info.Dimensions.Name})==1)).Length;
@@ -304,9 +318,6 @@ classdef romsMaster
 				end
 			end
 
-			% Add some other info
-			obj.info.r_tag = r_tag;
-
 			% Grab time info from average file
 			fieldnames = {obj.info.Attributes.Name};
 			fieldvalue = {obj.info.Attributes.Value};
@@ -318,7 +329,6 @@ classdef romsMaster
 			ntimes     = double(ntimes{1});
 
 			% Compute dt according to output frequency
-			obj.info.Year   = year;
 			obj.info.Freq   = dt*navg/86400;
 			obj.info.Ntimes = ((dt*ntimes)/86400)/(obj.info.Freq);
 			if obj.info.Freq > 27 & obj.info.Freq < 32
@@ -388,9 +398,9 @@ classdef romsMaster
 					m_text(obj.grid.lon_rho(end,j),obj.grid.lat_rho(end,j),num2str(j),'fontsize',8);
 				end
 			end
-			fname = [obj.info.r_tag,'_grid'];
+			fname = [obj.info.obj.info.simName,'_grid'];
 			if A.save == 1
-				export_fig('-jpg',[obj.paths.simPath,fname]);
+				export_fig('-jpg',[obj.paths.runPath,fname]);
 			end
 			if nargout < 1
 				pltjpg(1);
@@ -438,9 +448,9 @@ classdef romsMaster
 				m_plot(obj.region.lon_rho(:,1),obj.region.lat_rho(:,1),'--k','linewidth',2);
 				m_plot(obj.region.lon_rho(end,:),obj.region.lat_rho(end,:),'--k','linewidth',2);
 				m_plot(obj.region.lon_rho(:,end),obj.region.lat_rho(:,end),'--k','linewidth',2);
-				fname = [obj.info.r_tag,'_region'];
+				fname = [obj.info.obj.info.simName,'_region'];
 				if A.save == 1
-					export_fig('-jpg',[obj.paths.simPath,fname]);
+					export_fig('-jpg',[obj.paths.runPath,fname]);
 				else
 					pltjpg(1);
 				end
@@ -542,12 +552,13 @@ classdef romsMaster
 			fluxfile = ['phys_flux/phys_flux_avg_',num2str(year),A.ext,'.nc'];
 			zavgfile = ['z_avg/z_avg_',num2str(year),A.ext,'.nc'];
 			% Change filepaths
-			obj.paths.avg  = [obj.paths.simPath,avgfile];
-			obj.paths.his  = [obj.paths.simPath,hisfile];
-			obj.paths.flux = [obj.paths.simPath,fluxfile];
-			obj.paths.zavg = [obj.paths.simPath,zavgfile];
+			obj.paths.avg  = [obj.paths.runPath,avgfile];
+			obj.paths.his  = [obj.paths.runPath,hisfile];
+			obj.paths.flux = [obj.paths.runPath,fluxfile];
+			obj.paths.zavg = [obj.paths.runPath,zavgfile];
 			% Update info
-			obj = romsInfo(obj,obj.info.r_tag,year);
+			obj.info.runYear = year;
+			obj = romsInfo(obj);
 			% Redefine grid (mostly for z_r, z_w, Hz)
 			obj = loadGrid(obj);
 			% Redefine region
@@ -559,12 +570,12 @@ classdef romsMaster
 									obj.region.lat_lim(1):obj.region.lat_lim(2),:,:);	
 			% Initiate directories if they dont exist
 			[pathstr, name, ext] = fileparts(obj.paths.avg);
-			mkdir([obj.paths.simPath,'Figures']);
-			mkdir([obj.paths.simPath,'Figures/',name,'/']);
-			mkdir([obj.paths.simPath,'Figures/',name,'/Diagnostic']);
+			mkdir([obj.paths.runPath,'Figures']);
+			mkdir([obj.paths.runPath,'Figures/',name,'/']);
+			mkdir([obj.paths.runPath,'Figures/',name,'/Diagnostic']);
 
 			% grab plot paths
-			obj.paths.plots.diag    = [obj.paths.simPath,'Figures/',name,'/Diagnostic/'];
+			obj.paths.plots.diag    = [obj.paths.runPath,'Figures/',name,'/Diagnostic/'];
 			obj.paths.plots.tmpfigs = ['/data/project1/demccoy/tmpfigs/'];
 		end % end methods changeInputs
 
@@ -1960,8 +1971,8 @@ classdef romsMaster
 			if ~isempty(A.file)
 				tmpavg         = obj.paths.avg; % file
 				tmpzavg        = obj.paths.zavg; % file
-				obj.paths.avg  = [obj.paths.simPath,'avg/',A.file,'.nc'];
-				obj.paths.zavg = [obj.paths.simPath,'z_avg/z_',A.file,'.nc'];
+				obj.paths.avg  = [obj.paths.runPath,'avg/',A.file,'.nc'];
+				obj.paths.zavg = [obj.paths.runPath,'z_avg/z_',A.file,'.nc'];
 				avgfile        = [A.file,'.nc'];
 			else
 				avgfile = ['avg_',num2str(obj.info.Year),'.nc'];
@@ -1979,7 +1990,7 @@ classdef romsMaster
 			elseif strcmp(A.type,'z_avg');
 				q0 = 2;
 				% make z_avg file if it doesn't exist
-				if exist([obj.paths.simPath,'z_avg/z_',avgfile]) ~= 2
+				if exist([obj.paths.runPath,'z_avg/z_',avgfile]) ~= 2
 					disp('---------------------------------');
 					disp('Create z_avg Climatology File');
 					disp('---------------------------------');
@@ -3844,7 +3855,7 @@ classdef romsMaster
 		end % end method loadDiag
 
 		%--------------------------------------------------------------------------------
-		function obj = make_zavg(obj,avgfile)
+		function obj = make_zavg(obj)
 			% ------------------
 			% - Vertically interpolates the sigma coordinates ROMS file to 
 			% - WOA constant depth levels
@@ -3859,49 +3870,45 @@ classdef romsMaster
 			% - obj = make_zavg(obj,'avg_2009.nc');
 			% ------------------	
 			
-			% - get initial directory
+			% Get initial directory
 			od = pwd;
 
-			% - create z_avg_dir if it doesnt exist
-			z_avg_dir = [obj.paths.simPath,'z_avg'];
+			% Set avgfile name
+			[pathstr, avgname, avgext] = fileparts(obj.paths.avg);
+			avgfile = [avgname,avgext];
+
+			% Create z_avg_dir if it doesnt exist
+			z_avg_dir = [obj.paths.runPath,'z_avg'];
 			if exist(z_avg_dir) ~= 7
 				mkdir(z_avg_dir);
 			end
 			
-			% - run z_slice_onwoa if avg contains 'h'
-			try
-				kill
-				h = ncread(obj.paths.avg,'h');
-				cd(z_avg_dir);
-				cmd = ['z_slice_onwoa ', obj.paths.avg];
-					system(cmd);
-			catch
-				path1 = [obj.paths.simPath,'avg'];
-				path2 = [obj.paths.simPath,'z_avg'];
-				cmd = ['cp ',obj.paths.grid,' ',path1,'/.'];
-				system(cmd);
-				cd(path1);
-				dps = obj.grid.woa0p25.depth;
-				ss  = [];
-				for i = 1:length(dps)
-					if i < length(dps)
-						str    = [num2str(dps(i)),' '];
-					else
-						str    = [num2str(dps(i))];
-					end
-					str = {str};
-					ss     = strcat(ss,str);
+			% Create z_avg file (woa depths) 
+			path1 = [obj.paths.runPath,'avg'];
+			path2 = [obj.paths.runPath,'z_avg'];
+			cd(path1)
+			cmd = ['ln -s ',obj.paths.grid,' .'];
+			system(cmd);
+			dps = obj.grid.woa0p25.depth;
+			ss  = [];
+			for i = 1:length(dps)
+				if i < length(dps)
+					str    = [num2str(dps(i)),' '];
+				else
+					str    = [num2str(dps(i))];
 				end
-				[pathstr, gname, gext] = fileparts(obj.paths.grid);
-				cmd = ['zslice ',ss{:},' ',[gname,gext],' ',avgfile]; 
-				system(cmd);
-				cmd = ['nczip -1 -vs z_',avgfile];
-				system(cmd);
-				cmd = ['mv z_',avgfile,' ',path2];
-				system(cmd)
+				str = {str};
+				ss     = strcat(ss,str);
 			end
+			[pathstr, gname, gext] = fileparts(obj.paths.grid);
+			cmd = ['zslice ',ss{:},' ',[gname,gext],' ',avgfile]; 
+			system(cmd);
+			cmd = ['nczip -1 -vs z_',avgfile];
+			system(cmd);
+			cmd = ['mv z_',avgfile,' ',path2];
+			system(cmd)
 
-			% - return to original directory
+			% Return to original directory
 			cd(od);
 		end % end method make_zavg
 
@@ -5123,6 +5130,12 @@ classdef romsMaster
 			%   v = ROMS v velocity
 			%   pm = ROMS grid 'pm', or curvilinear coordinate metrix in XI
 			%   pn = ROMS grid 'pn', or curvilinear coordinate metrix in ETA
+			%
+			% Outputs:
+			%	lambda2 = Okubo-Weiss (lambda^2) in s^-2
+			%   xi      = Relative vorticity in s^-1
+			%   ST      = Shear strain in s^-1
+			%   SN      = Normal strain in s^-1
 			% --------------------------------------------------------------------
 			
 			% Get grid dimensions		
