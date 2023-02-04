@@ -1,14 +1,16 @@
-function obj = romsComp(obj,plotchoice)
+function obj = romsComp(obj,file,plotchoice)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Script to automatically generate comparison plots between ROMS simulations 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Usage:
-% - obj = romsComp(obj,plotchoice)
+% - obj = romsComp(obj,file1,file2,plotchoice)
 %
 % Inputs:
-% - obj = roms objects (2) that are already initialized
+% - obj   = roms objects (2) that are already initialized
 %			... comparisons will be obj(1) - obj(2)
+% - file  = cell array of files to load  
+% -         ... file{1} = obj(1) files etc.
 % - plotchoice (see below) 
 %
 %	------------------------------
@@ -40,7 +42,7 @@ function obj = romsComp(obj,plotchoice)
 %	------------------------------
 %
 % Example:
-% - obj = romsComp(obj,[1:11]);
+% - obj = romsComp(obj,{[1],[1]},[2:11]);
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -334,7 +336,7 @@ comppath = [compDir,'plots/',obj(1).info.runName,'_VS_',obj(2).info.runName,'/']
 mkdir(comppath)
 
 % Clear workspace and begin
-clearvars -except obj plots comppath
+clearvars -except obj plots comppath file
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% PHYSICAL DIAGNOSTICS %%%%%%%%
@@ -356,7 +358,7 @@ if plots(pltcnt).on;
 		end
 		for o = 1:length(obj)
 			obj(o) = clearROMS(obj(o));
-			obj(o) = zslice(obj(o),vars(v),zdeps,1);
+			obj(o) = zslice(obj(o),vars(v),zdeps,file{o});
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		for z = 1:length(zdeps)
@@ -368,19 +370,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms1']);
 			close(figs(1));
 			% ROMS2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms2']);
 			close(figs(2));
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms_diff']);
 			close(figs(3));
 		end
 	end
@@ -388,7 +390,7 @@ if plots(pltcnt).on;
 	for o = 1:length(obj)
 		obj(o) = clearROMS(obj(o));
 	end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -405,7 +407,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}; 
@@ -417,19 +419,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -437,7 +439,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -449,7 +451,7 @@ if plots(pltcnt).on;
 	unpactStruct(plots(pltcnt));
 	for o = 1:length(obj)
 		obj(o) = clearROMS(obj(o));
-		obj(o) = computeVar(obj(o),vars(opt==1),1);
+		obj(o) = computeVar(obj(o),vars(opt==1),file{o});
 	end
 	for v = 1:length(vars)
 		if ~opt(v)
@@ -464,25 +466,25 @@ if plots(pltcnt).on;
 		set(0,'CurrentFigure',figs(1));
 		title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name],'Interpreter','Latex');
 		ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_',obj(1).info.runName]);
+		export_fig('-png',[comppath,vars{v},'_roms1']);
 		close(figs(1));
 		set(0,'CurrentFigure',figs(2));
 		title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name],'Interpreter','Latex');
 		ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_',obj(2).info.runName]);
+		export_fig('-png',[comppath,vars{v},'_roms2']);
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title(['ROMS Difference'],'Interpreter','Latex');
 		ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_roms_diff']);
+		export_fig('-png',[comppath,vars{v},'_roms_diff']);
 		close(figs(3));
 	end
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -499,7 +501,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}; 
@@ -511,19 +513,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -531,7 +533,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -552,23 +554,23 @@ if plots(pltcnt).on;
 	set(0,'CurrentFigure',figs(1));
 	title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{1}).name,': ',num2str(obj(1).slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(1),obj(1).data.avg.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-pdf',[comppath,'equ_roms_',obj(1).info.runName]);
+	export_fig('-png',[comppath,'equ_roms_roms1']);
 	close(figs(1))
 	% ROMS figure
 	set(0,'CurrentFigure',figs(2));
 	title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{1}).name,': ',num2str(obj(2).slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(2),obj(2).data.avg.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-pdf',[comppath,'equ_roms_',obj(2).info.runName]);
+	export_fig('-png',[comppath,'equ_roms_roms2']);
 	close(figs(2))
 	% Difference figure
 	set(0,'CurrentFigure',figs(3));
 	title(['ROMS Difference: ',num2str(obj(1).slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(3),obj(1).data.avg.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-pdf',[compath,'equ_roms_diff']);
+	export_fig('-png',[compath,'equ_roms_diff']);
 	close(figs(3))
 	% Clear data
 	obj = clearROMS(obj);
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -590,7 +592,7 @@ if plots(pltcnt).on;
 		end
 		for o = 1:length(obj)
 			obj(o) = clearROMS(obj(o));
-			obj(o) = zslice(obj(o),vars(v),zdeps,1);
+			obj(o) = zslice(obj(o),vars(v),zdeps,file{o});
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		for z = 1:length(zdeps)
@@ -602,19 +604,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms1']);
 			close(figs(1));
 			% ROMS2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms2']);
 			close(figs(2));
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms_diff']);
 			close(figs(3));
 		end
 	end
@@ -622,7 +624,7 @@ if plots(pltcnt).on;
 	for o = 1:length(obj)
 		obj(o) = clearROMS(obj(o));
 	end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -639,7 +641,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}; 
@@ -651,19 +653,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -671,7 +673,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -683,7 +685,7 @@ if plots(pltcnt).on;
 	unpactStruct(plots(pltcnt));
 	for o = 1:length(obj)
 		obj(o) = clearROMS(obj(o));
-		obj(o) = loadData(obj(o),vars(opt==1),1);
+		obj(o) = loadData(obj(o),vars(opt==1),file{o});
 	end
 	for v = 1:length(vars)
 		if ~opt(v)
@@ -698,25 +700,25 @@ if plots(pltcnt).on;
 		set(0,'CurrentFigure',figs(1));
 		title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name],'Interpreter','Latex');
 		ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_',obj(1).info.runName]);
+		export_fig('-png',[comppath,vars{v},'_roms1']);
 		close(figs(1));
 		set(0,'CurrentFigure',figs(2));
 		title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name],'Interpreter','Latex');
 		ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_',obj(2).info.runName]);
+		export_fig('-png',[comppath,vars{v},'_roms2']);
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title(['ROMS Difference'],'Interpreter','Latex');
 		ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-		export_fig('-pdf',[comppath,vars{v},'_roms_diff']);
+		export_fig('-png',[comppath,vars{v},'_roms_diff']);
 		close(figs(3));
 	end
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -733,7 +735,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}; 
@@ -745,19 +747,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -765,7 +767,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -776,7 +778,7 @@ pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
 	unpactStruct(plots(pltcnt));
 	for o = 1:length(obj)
-		obj(o) = loadData(obj(o),vars,1);
+		obj(o) = loadData(obj(o),vars,file{o});
 	end
 	roms1dat = nanmean(obj(1).data.avg.(vars{1}).data,3);
 	roms2dat = nanmean(obj(2).data.avg.(vars{1}).data,3);
@@ -791,13 +793,13 @@ if plots(pltcnt).on;
 	title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{1}).name,': sfc'],'Interpreter','Latex');
 	ylabel(cbs(1),obj(1).data.avg.(vars{1}).units,'Interpreter','Latex');
 	cbs(1).XTickLabel = absLbls; 
-	export_fig('-pdf',[comppath,vars{1},'_',obj(1).info.runName]);
+	export_fig('-png',[comppath,vars{1},'_roms1']);
 	% ROMS2 figure
 	set(0,'CurrentFigure',figs(2));
 	title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{1}).name,': sfc'],'Interpreter','Latex');
 	ylabel(cbs(2),obj(2).data.avg.(vars{1}).units,'Interpreter','Latex');
 	cbs(2).XTickLabel = absLbls; 
-	export_fig('-pdf',[comppath,vars{1},'_',obj(2).info.runName]);
+	export_fig('-png',[comppath,vars{1},'_roms2']);
 	close(figs(2));
 	% Diff figure
 	set(0,'CurrentFigure',figs(3));
@@ -806,14 +808,14 @@ if plots(pltcnt).on;
 	cbs(3).XTick = diffLevs;
 	cbs(3).XTickLabel = diffLbls;
 	cbs(3).Limits = diffCaxis;
-	export_fig('-pdf',[comppath,vars{1},'_roms_diff']);
+	export_fig('-png',[comppath,vars{1},'_roms_diff']);
 	close(figs(3));
     
 	% Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-    clearvars -except obj plots comppath pltcnt
+    clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -825,7 +827,7 @@ if plots(pltcnt).on;
 	unpactStruct(plots(pltcnt));
     % Get OMZ thickness
 	for o = 1:length(obj)
-		obj(o) = computeVar(obj(o),{'OMZ'},1,'thresh',omzthresh);
+		obj(o) = computeVar(obj(o),{'OMZ'},file{o},'thresh',omzthresh);
 	end
     % Make comparison plots
 	for th = 1:length(omzthresh)
@@ -838,7 +840,7 @@ if plots(pltcnt).on;
 			'Interpreter','Latex');
 		ylabel(cbs(1),obj(1).data.avg.OMZ.units,'Interpreter','Latex')
 		set(gcf,'ColorMap',cmap);
-		export_fig('-pdf',[comppath,'OMZ_roms_th',num2str(omzthresh(th)),'_',obj(1).info.runName]);
+		export_fig('-png',[comppath,'OMZ_roms_th',num2str(omzthresh(th)),'_roms1']);
 		close(figs(1));
 		% ROMS figure
 		set(0,'CurrentFigure',figs(2));
@@ -846,20 +848,20 @@ if plots(pltcnt).on;
 			'Interpreter','Latex');
 		ylabel(cbs(2),obj(2).data.avg.OMZ.units,'Interpreter','Latex')
 		set(gcf,'ColorMap',cmap);
-		export_fig('-pdf',[comppath,'OMZ_roms_th',num2str(omzthresh(th)),'_',obj(2).info.runName]);
+		export_fig('-png',[comppath,'OMZ_roms_th',num2str(omzthresh(th)),'_roms2']);
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title(['ROMS Difference'],'Interpreter','Latex');
 		ylabel(cbs(3),obj(1).data.avg.OMZ.units,'Interpreter','Latex')
-		export_fig('-pdf',[comppath,'OMZ_roms_diff_th',num2str(omzthresh(th))]);
+		export_fig('-png',[comppath,'OMZ_roms_diff_th',num2str(omzthresh(th))]);
 		close all
 	end
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-    clearvars -except obj plots comppath pltcnt
+    clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -873,16 +875,20 @@ if plots(pltcnt).on;
 	mmolNps_to_TgNpy = [(10^-3)*14*3600*24*365.25]/(1e12);
 	% Go through each variable
 	for v = 1:length(vars)
+        if ~opt(v)
+            disp(['...skipping ',vars{v},'...']);
+            continue
+        end
 		for o = 1:length(obj)
 			if isempty(obj(o).grid.avg)
-				obj(o) = loadDepth(obj(o),1);
+				obj(o) = loadDepth(obj(o),file{o});
 			end
-			obj(o) = loadData(obj(o),vars(v),1);
+			obj(o) = loadData(obj(o),vars(v),file{o});
 			obj(o) = intVar(obj(o),vars(v));
 			out(o).int = obj(o).data.avg.(vars{v}).int;
 			out(o).tot = obj(o).data.avg.(vars{v}).tot;
 		end
-
+		
 		% Get total figure
         fig = piofigs('mfig',0.66);
         sb(1) = subplot(1,10,[1:7]);
@@ -906,7 +912,7 @@ if plots(pltcnt).on;
         yl = get(gca,'YLim'); yl = [0 yl(end)]; ylim(yl);
         title(['Total ',lower(vars{v})],'FontSize',8);
         ylabel('$TgN$ $yr^{-1}$','Interpreter','Latex');
-        xlabel(['Model year ',num2str(obj(1).info.runYear)]);
+        %xlabel(['Model year ',num2str(obj(1).info.runYear)]);
 
         % Side panel
         sb(2) = subplot(1,10,[8:10]);
@@ -925,7 +931,7 @@ if plots(pltcnt).on;
         sb(2).Position([2 4]) = [sb(2).Position(2)+0.1 sb(2).Position(4)-0.1];
         sb(1).Position([2 4]) = sb(2).Position([2 4]);
         % Save figure
-        export_fig('-pdf',[comppath,'tot_',lower(vars{v})]);
+        export_fig('-png',[comppath,'tot_',lower(vars{v})]);
         close all
 
 		% Get integrated figure
@@ -935,24 +941,24 @@ if plots(pltcnt).on;
 		% ROMS1 figure
 		set(0,'CurrentFigure',figs(1));
 		title({obj(1).info.runTit,['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_',obj(1).info.runName]);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms1']);
 		close(figs(1));
 		% ROMS2 figure
 		set(0,'CurrentFigure',figs(2));
 		title({obj(2).info.runTit,['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_',obj(2).info.runName]);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms2']);
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title({'ROMS Difference',['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_roms_diff']);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms_diff']);
 		close(figs(3));		
 	end
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-    clearvars -except obj plots comppath pltcnt
+    clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -966,9 +972,9 @@ if plots(pltcnt).on;
 	for v = 1:length(vars)
 		for o = 1:length(obj)
 			if isempty(obj(o).grid.avg)
-				obj(o) = loadDepth(obj(o),1);
+				obj(o) = loadDepth(obj(o),file{o});
 			end
-			obj(o) = loadData(obj(o),vars(v),1);
+			obj(o) = loadData(obj(o),vars(v),file{o});
 			obj(o) = intVar(obj(o),vars(v));
 			out(o).int = obj(o).data.avg.(vars{v}).int;
 			out(o).tot = obj(o).data.avg.(vars{v}).tot;
@@ -997,7 +1003,7 @@ if plots(pltcnt).on;
         yl = get(gca,'YLim'); yl = [0 yl(end)]; ylim(yl);
         title(['Total ',lower(vars{v})],'FontSize',8);
         ylabel(obj(1).data.avg.(vars{v}).totunits,'Interpreter','Latex');
-        xlabel(['Model year ',num2str(obj(1).info.runYear)]);
+        %xlabel(['Model year ',num2str(obj(1).info.runYear)]);
 
         % Side panel
         sb(2) = subplot(1,10,[8:10]);
@@ -1016,7 +1022,7 @@ if plots(pltcnt).on;
         sb(2).Position([2 4]) = [sb(2).Position(2)+0.1 sb(2).Position(4)-0.1];
         sb(1).Position([2 4]) = sb(2).Position([2 4]);
         % Save figure
-        export_fig('-pdf',[comppath,'tot_',lower(vars{v})]);
+        export_fig('-png',[comppath,'tot_',lower(vars{v})]);
         close all
 
 		% Get integrated figure
@@ -1027,24 +1033,24 @@ if plots(pltcnt).on;
 		% ROMS1 figure
 		set(0,'CurrentFigure',figs(1));
 		title({obj(1).info.runTit,['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_',obj(1).info.runName]);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms1']);
 		close(figs(1));
 		% ROMS2 figure
 		set(0,'CurrentFigure',figs(2));
 		title({obj(2).info.runTit,['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_',obj(2).info.runName]);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms2']);
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title({'ROMS Difference',['Integrated ',lower(vars{v})]},'Interpreter','none');
-		export_fig('-pdf',[comppath,'int_',lower(vars{v}),'_roms_diff']);
+		export_fig('-png',[comppath,'int_',lower(vars{v}),'_roms_diff']);
 		close(figs(3));		
 	end
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-    clearvars -except obj plots comppath pltcnt
+    clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1077,12 +1083,12 @@ if plots(pltcnt).on;
 		m_plot(latx{i},laty{i},'--k');
 	end
 	title(['Location of depth slices'],'Interpreter','Latex');
-	export_fig('-pdf',[comppath,'trans_locations']);
+	export_fig('-png',[comppath,'trans_locations']);
     % Clear data
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-    clearvars -except obj plots comppath pltcnt	
+    clearvars -except obj plots comppath file pltcnt	
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1099,7 +1105,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lats,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}.*86400.*convert(v); 
@@ -1111,19 +1117,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lat',num2str(lats(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -1131,7 +1137,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1148,7 +1154,7 @@ if plots(pltcnt).on;
             continue
         end
 		for o = 1:length(obj)
-			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,1,'type','z_avg','zlim',zlims(end));
+			obj(o) = sliceROMS(obj(o),vars(v),choice,lons,file{o},'type','z_avg','zlim',zlims(end));
 			tmp{o} = obj(o).data.avg.(vars{v}).slice;
 		end
 		roms1dat = tmp{1}.*86400.*convert(v); 
@@ -1160,19 +1166,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),'$mmol$ $N$ $m^{-3}$ $d^{-1}$','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_lon',num2str(lons(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -1180,7 +1186,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1193,7 +1199,7 @@ if plots(pltcnt).on;
     % Inter-ROMS comparisons
 	for o = 1:length(obj)
 		% Load vars, calculate total N-loss
-		obj(o) = sliceROMS(obj(o),vars,choice,lats,1,'type','z_avg','zlim',zlims(end));
+		obj(o) = sliceROMS(obj(o),vars,choice,lats,file{o},'type','z_avg','zlim',zlims(end));
 		obj(o).data.avg.NLoss.slice = obj(o).data.avg.N2OAMMOX.slice.*2 + ...
 									  obj(o).data.avg.DENITRIF2.slice.*1 + ...
 									  obj(o).data.avg.ANAMMOX.slice.*2; 
@@ -1218,19 +1224,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,' fraction: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,' fraction: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_frac_lat',num2str(lats(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -1238,7 +1244,7 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1251,7 +1257,7 @@ if plots(pltcnt).on;
     % Inter-ROMS comparisons
 	for o = 1:length(obj)
 		% Load vars, calculate total N-loss
-		obj(o) = sliceROMS(obj(o),vars,choice,lons,1,'type','z_avg','zlim',zlims(end));
+		obj(o) = sliceROMS(obj(o),vars,choice,lons,file{o},'type','z_avg','zlim',zlims(end));
 		obj(o).data.avg.NLoss.slice = obj(o).data.avg.N2OAMMOX.slice.*2 + ...
 									  obj(o).data.avg.DENITRIF2.slice.*1 + ...
 									  obj(o).data.avg.ANAMMOX.slice.*2; 
@@ -1276,19 +1282,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,' fraction: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_',obj(1).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_roms1']);
 			close(figs(1));
 			% ROM2 figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,' fraction: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_',obj(2).info.runName]);
+			export_fig('-png',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_roms2']);
 			close(figs(2));
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['ROMS Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),'Percent','Interpreter','Latex');
-			export_fig('-pdf',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_roms_diff']);
+			export_fig('-png',[comppath,vars{v},'_frac_lon',num2str(lons(l)),'_roms_diff']);
 			close(figs(3))
 		end
 	end
@@ -1296,5 +1302,5 @@ if plots(pltcnt).on;
     for o = 1:length(obj)
         obj(o) = clearROMS(obj(o));
     end
-	clearvars -except obj plots comppath pltcnt
+	clearvars -except obj plots comppath file pltcnt
 end
