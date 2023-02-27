@@ -268,7 +268,10 @@ classdef romsMaster
 
 				% Get time-steps
 				for i = 1:length(obj.info.(file_types{ff}).files);
-					tmp.info = ncinfo([file_path,obj.info.(file_types{ff}).files{i}]);
+					% All files should have the same time dimension, so just use the first file
+					if i == 1
+						tmp.info = ncinfo([file_path,obj.info.(file_types{ff}).files{i}]);
+					end
 					tmptime(i) = tmp.info.Dimensions(find(strcmp('time',{obj.info.(file_types{ff}).Dimensions.Name})==1)).Length; 
 				end
 				obj.info.(file_types{ff}).time = tmptime;
@@ -2460,7 +2463,7 @@ classdef romsMaster
 				elseif strcmp(vars{i},'SSH') | strcmp(vars{i},'ssh');
 					obj = loadData(obj,{'zeta'},file,'type',A.type);
 					obj = loadDiag(obj,{'SSH'},0);
-					slacorr = nanmedian(obj.diag.SSH.data(:)) - nanmedian(obj.data.(A.type).zeta.data(:));
+					slacorr = nanmedian(obj.diag.SSH.slice(:)) - nanmedian(obj.data.(A.type).zeta.data(:));
 					disp(' '); disp(['Adding correction of ',num2str(slacorr),'m to ROMS SSH']);
 					obj.data.(A.type).SSH.data = obj.data.(A.type).zeta.data + slacorr;
 					obj.data.(A.type).SSH.name = 'averaged sea-surface height';
@@ -5646,5 +5649,16 @@ function [paths] = getDiagPaths;
 	paths.diag.POC_FLUX_IN.units  = {'$mmol$ $C$ $m^{-2}$ $s^{-1}$'};
 	paths.diag.POC_FLUX_IN.factor = {(1/12.01*86400)}; % mgC/m2/d to mmolC/m2/s 
 
-end % end method initPlots
+	% Fe data from Tagliabue
+	paths.diag.Fe.file   = {'/data/project6/ROMS/PACMEC25/Tagliabue_data/Monthly_dFe.nc'};
+	paths.diag.Fe.type   = {'nc'};
+	paths.diag.Fe.var    = {'dFe_RF'};
+	paths.diag.Fe.zvar   = {'Depth'};
+	paths.diag.Fe.dim    = {'xyzt'};
+	paths.diag.Fe.lon    = {'Longitude'};
+	paths.diag.Fe.lat    = {'Latitude'};
+	paths.diag.Fe.name   = {'Monthly dissolved iron simulated from random forest algorithm'};
+	paths.diag.Fe.units  = {'$mmol$ $Fe$ $m^{-3}$'};
+	paths.diag.Fe.factor = {(1/1000)}; % nmol/L to mmol/m3
 
+end % end method initPlots

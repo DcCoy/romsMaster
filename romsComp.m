@@ -229,6 +229,7 @@ plots(pltcnt).on = plotchoice(pltcnt);
 pltcnt = pltcnt + 1;
 plots(pltcnt).on = plotchoice(pltcnt);
 	plots(pltcnt).vars    = {'AMMOX','NITROX','DENITRIF1','DENITRIF2','DENITRIF3','ANAMMOX','N2OAMMOX'};
+	plots(pltcnt).opt     = [1 1 1 1 1 1 1];
 	plots(pltcnt).convert = [1 1 1 1 2 2 2];
 	plots(pltcnt).colr    = {rgb('DarkMagenta'),rgb('Goldenrod')}; 
 	plots(pltcnt).cmaps   = {'tempo','tempo','tempo','tempo','tempo','tempo','tempo'};
@@ -414,7 +415,7 @@ if plots(pltcnt).on;
 		roms2dat = tmp{2}; 
 		for l = 1:length(lats)
 			[figs,cbs] = sliceCmp(obj(1),roms1dat,roms2dat,0,'cmap',cmaps{v},'xlims',xlims,'zlims',zlims,...
-				'figdim',0.5,'slice',l,'levels',levs{v,l},'difflevels',dlevs{v});
+				'figdim',0.5,'slice',l,'levels',levs{v},'difflevels',dlevs{v});
 			% ROMS1 figure
 			set(0,'CurrentFigure',figs(1));
 			title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');

@@ -381,6 +381,7 @@ end
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
 	unpactStruct(plots(pltcnt));
+	obj = clearROMS(obj);
 	obj = loadData(obj,vars(opt==1),file);
 	obj = loadDiag(obj,vars(opt==1),0);
 	for v = 1:length(vars)
@@ -388,7 +389,6 @@ if plots(pltcnt).on;
 			disp(['...skipping ',vars{v},'...']);
 			continue
 		end
-		obj = clearROMS(obj);
 		for d = 1:length(obj.diag.(vars{v}))
 			close all
 			romsdat    = nanmean(obj.data.avg.(vars{v}).data,3);
