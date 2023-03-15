@@ -337,25 +337,25 @@ classdef romsMaster
 				fieldvalue = {obj.info.(file_types{ff}).Attributes.Value};
 				dt         = fieldvalue(strcmp(fieldnames,'dt'));
 				dt         = double(dt{1});
-				navg       = fieldvalue(strcmp(fieldnames,'navg'));
-				navg       = double(navg{1});
+				%navg       = fieldvalue(strcmp(fieldnames,'navg'));
+				%navg       = double(navg{1});
 				ntimes     = fieldvalue(strcmp(fieldnames,'ntimes'));
 				ntimes     = double(ntimes{1});
 
 				% Compute dt according to output frequency
-				obj.info.(file_types{ff}).Freq   = dt*navg/86400;
-				obj.info.(file_types{ff}).Ntimes = ((dt*ntimes)/86400)/(obj.info.(file_types{ff}).Freq);
-				obj.info.(file_types{ff}).dt     = dt*navg;
-				if obj.info.(file_types{ff}).Freq > 27 & obj.info.(file_types{ff}).Freq < 32
+				%obj.info.(file_types{ff}).Freq   = dt*navg/86400;
+				%obj.info.(file_types{ff}).Ntimes = ((dt*ntimes)/86400)/(obj.info.(file_types{ff}).Freq);
+				%obj.info.(file_types{ff}).dt     = dt*navg;
+				%if obj.info.(file_types{ff}).Freq > 27 & obj.info.(file_types{ff}).Freq < 32
 					obj.info.(file_types{ff}).time_string     = ['Monthly'];
 					obj.info.(file_types{ff}).time_string_idv = {'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'};
-				elseif obj.info.(file_types{ff}).Freq == 1
-					obj.info.(file_types{ff}).time_string = ['Daily'];
-					obj.info.(file_types{ff}).time_string_idv = num2cell(1:31);
-				elseif obj.info.(file_types{ff}).Freq < 1
-					obj.info.(file_types{ff}).time_string = ['Hourly'];
-					obj.info.(file_types{ff}).time_string_idv = num2cell(1:24);
-				end
+				%elseif obj.info.(file_types{ff}).Freq == 1
+				%	obj.info.(file_types{ff}).time_string = ['Daily'];
+				%	obj.info.(file_types{ff}).time_string_idv = num2cell(1:31);
+				%elseif obj.info.(file_types{ff}).Freq < 1
+				%	obj.info.(file_types{ff}).time_string = ['Hourly'];
+				%	obj.info.(file_types{ff}).time_string_idv = num2cell(1:24);
+				%end
 
 				% Replace strings
 				for i = 1:length(strings_to_replace)
@@ -2841,16 +2841,16 @@ classdef romsMaster
 			% Loads profile data at the nearest lon/lat point 
 			%
 			% Usage:
-			%	- obj = getProfile(obj,vars,lon,lat);
+			%	- obj = getProfile(obj,vars,lon,lat,file);
 			%
 			% Inputs:
 			%	- vars  = variables to load, as a cell array
 			%	- lon   = vector of longitude points
 			%	- lat   = vector of latitude points
-			%   - file  = input file number
+			%	- file  = input file number
 			%
 			% Inputs (varargin):
-			%   - type     = 'avg' or 'z_avg' (raw cant be used with yr_range)
+			%	- type     = 'avg' or 'z_avg' (raw cant be used with yr_range)
 			%	- yr_range = range of years to load and average (i.e. 2045:2049)
 			%
 			% Example:
@@ -2913,7 +2913,7 @@ classdef romsMaster
 			% - depth = depths to interpolate data, will round to nearest z_avg_dep
 			%			for surface data, use depth = 0
 			%
-			% Inputs (varargin)
+			% Optional inputs (varargin):
 			% - outer = degrees of lon/lat to pad interpolant, default = 3
 			%
 			% Example:
@@ -2974,6 +2974,14 @@ classdef romsMaster
 					if strcmp(curVar.type{j},'nc');
 						tmp.lon = romsMaster.lon360(ncread(curVar.file{j},curVar.lon{j}));
 						tmp.lat = ncread(curVar.file{j},curVar.lat{j});
+						if ndims(tmp.lon)>2
+							tmp.lon = squeeze(tmp.lon(:,:,1));
+							tmp.lat = squeeze(tmp.lat(:,:,1));
+							if ismember(curVar.dim{j},{'yxt','yxz','yxzt'})
+								tmp.lon = tmp.lon';
+								tmp.lat = tmp.lat';
+							end
+						end
 					elseif strcmp(curVar.type{j},'mat');
 						tmp.lon = load(curVar.file{j},curVar.lon{j});
 						tmp.lat = load(curVar.file{j},curVar.lat{j});
@@ -3011,10 +3019,13 @@ classdef romsMaster
 
 						% Get data
 						if strcmp(curVar.type{j},'nc')
-							if strcmp(curVar.dim{j},'xyt')
+							if strcmp(curVar.dim{j},'xyt') | strcmp(curVar.dim{j},'yxt');
 								tmpdata  = squeeze(ncread(curVar.file{j},curVar.var{j},...
 											[1,1,k],[inf,inf,1]));
 								tmpdepth = 0;
+								if strcmp(curVar.dim{j},'yxt');
+									tmpdata = permute(tmpdata,[2 1 3]);
+								end
 							elseif strcmp(curVar.dim{j},'txy');
 								tmpdata  = squeeze(ncread(curVar.file{j},curVar.var{j},...
 											[k,1,1],[1,inf,inf]));
@@ -3023,20 +3034,38 @@ classdef romsMaster
 								tmpdepth = ncread(curVar.file{j},curVar.zvar{j});
 								tmpdata  = squeeze(ncread(curVar.file{j},curVar.var{j},...
 									   [1,1,1,k],[inf,inf,inf,1]));
+							elseif strcmp(curVar.dim{j},'xyz') | strcmp(curVar.dim{j},'yxz')
+								tmpdata = ncread(curVar.file{j},curVar.var{j});
+								tmpdepth = ncread(curVar.file{j},curVar.zvar{j});
+								if strcmp(curVar.dim{j},'yxz')
+									tmpdata = permute(tmpdata,[2 1 3]);
+									tmpdepth = permute(tmpdepth,[2 1 3]);
+								end
 							end
 						elseif strcmp(curVar.type{j},'mat')
-							if strcmp(curVar.dim{j},'xyt');
+							if strcmp(curVar.dim{j},'xyt') | strcmp(curVar.dim{j},'yxt');
 								tmpdata  = load(curVar.file{j},curVar.var{j});
 								tmpdata  = tmpdata.(curVar.var{j})(:,:,k);
 								tmpdepth = 0;
+								if strcmp(curVar.dim{j},'yxt');
+									tmpdata = permute(tmpdata,[2 1 3]);
+								end
 							elseif strcmp(curVar.dim{j},'xyzt')
 								tmpdepth = load(curVar.file{j},curVar.zvar{j});
 								tmpdepth = tmpdepth.(curVar.zvar{j});
 								tmpdata  = load(curVar.file{j},curVar.var{j});
 								tmpdata  = tmpdata.(curVar.var{j})(:,:,:,k);
+							elseif strcmp(curVar.dim{j},'xyz') | strcmp(curVar.dim{j},'yxz');
+								tmpdepth = load(curVar.file{j},curVar.zvar{j});
+								tmpdepth = tmpdepth.(curVar.zvar{j});
+								tmpdata  = load(curVar.file{j},curVar.var{j});
+								if strcmp(curVar.dim{j},'yxz');
+									tmpdepth = permute(tmpdepth,[2 1 3]);
+									tmpdata  = permute(tmpdata,[2 1 3]);
+								end
 							end
 						end
-		
+
 						% Apply any factors (eg nMol to uMol)	
 						if isfield(curVar,'factor');
 							tmpdata = tmpdata*curVar.factor{j};
@@ -3055,10 +3084,10 @@ classdef romsMaster
 								depth = -depth;
 							end
 							zind  = find(abs([zdepth-depth(z)]) == min(abs([zdepth-depth(z)])));
-							if ~strcmp(curVar.dim{j},'xyt')
+							if ~strcmp(curVar.dim{j},'xyt') | ~strcmp(curVar.dim{j},'yxt');
 								data  = data(:,:,zind);
 							end
-							if strcmp(curVar.dim{j},'xyt') & z > 1
+							if strcmp(curVar.dim{j},'xyt') & z > 1 | strcmp(curVar.dim{j},'yxt') & z > 1
 								disp(['No z-data for ',vars{i},', skipping']);
 								continue
 							end
@@ -3656,7 +3685,7 @@ classdef romsMaster
 			% Plots 2D sliced variables obtained from sliceROMS or sliceDiag
 			%
 			% Usage:
-			% - [fig,cb] = slicePlot(obj,vars,t,varargin);
+			% - [fig,cb] = slicePlot(obj,slicedata,t,varargin);
 			%
 			% Inputs:
 			% - slicedata = sliced data from sliceROMS or sliceDiag (must be size(obj.slice.deg)) 
@@ -3676,8 +3705,7 @@ classdef romsMaster
 			% - background: background color (i.e. coast). Default = rgb('DimGray');
 			%
 			% Example:
-			% - [fig,cb] = slicePlot(obj,{'O2'},0,'xlims',[140 260],'zlims',[-500 0]);
-			% This will averaged O2 from 0 -500m with lon limits of 140/260
+			% - [fig,cb] = slicePlot(obj,tmpdata,0,'xlims',[140 260],'zlims',[-500 0]);
 			% ------------------
 			
 			% User-inputs
@@ -3699,7 +3727,7 @@ classdef romsMaster
 				disp('Slice your data first using sliceROMS or sliceDiag');
 				return
 			end
-		
+	
 			% Check that A.slice has also been reduced
 			if ndims(obj.slice.depth)>3  & isempty(A.slice) 
 				disp('You forgot to specify which slice! Killing');
@@ -5626,7 +5654,7 @@ function [paths] = getDiagPaths;
 
 	% MLD products (WOCE/NODC/ARGO or ARGO only);
 	paths.diag.MLD.file  = {'/data/project1/demccoy/ROMS/validation/MLD/Argo_mixedlayers_monthlyclim_12112019.nc',...
-								'/data/project1/demccoy/ROMS/validation/MLD/mld_DR003_c1m_reg2.0.nc'};
+							'/data/project1/demccoy/ROMS/validation/MLD/mld_DR003_c1m_reg2.0.nc'};
 	paths.diag.MLD.type  = {'nc','nc'};
 	paths.diag.MLD.var   = {'mld_da_mean','mld'};
 	paths.diag.MLD.zvar  = {[],[]};
@@ -5637,28 +5665,56 @@ function [paths] = getDiagPaths;
 	paths.diag.MLD.units = {'$m$','$m$'};
 
 	% POC_FLUX_IN
-	paths.diag.POC_FLUX_IN.file   = {'/data/project1/demccoy/ROMS/validation/POC_FLUX_IN/clements_100m_flux.mat'};
-	paths.diag.POC_FLUX_IN.file   = {'/data/project1/demccoy/ROMS/validation/POC_FLUX_IN/clements_100m_flux.mat'};
-	paths.diag.POC_FLUX_IN.type   = {'mat'};
-	paths.diag.POC_FLUX_IN.var    = {'flux_mean'};
-	paths.diag.POC_FLUX_IN.zvar   = {[]};
-	paths.diag.POC_FLUX_IN.dim    = {'xyt'};
-	paths.diag.POC_FLUX_IN.lon    = {'lon'};
-	paths.diag.POC_FLUX_IN.lat    = {'lat'};
-	paths.diag.POC_FLUX_IN.name   = {'Clements et al. (2022) 100m POC Flux'};
-	paths.diag.POC_FLUX_IN.units  = {'$mmol$ $C$ $m^{-2}$ $s^{-1}$'};
-	paths.diag.POC_FLUX_IN.factor = {(1/12.01*86400)}; % mgC/m2/d to mmolC/m2/s 
+	paths.diag.POC_FLUX_IN.file   = {'/data/project1/demccoy/ROMS/validation/POC_FLUX_IN/clements_100m_flux.mat',...
+									 '/data/project1/data/particle_flux/Clements_2023/Euphotic_Export_2023.nc',...
+									 '/data/project1/data/particle_flux/Siegel_2014/TotEZ_Annual_Monthly_July2020.mat',...
+									 '/data/project1/data/particle_flux/Nowicki_2022/biopump_model_output.nc',...
+                                     '/data/project1/data/particle_flux/Dunne_2005/Dunne_1deg_DM.mat'};
+	paths.diag.POC_FLUX_IN.type   = {'mat','nc','mat','nc','mat'};
+	paths.diag.POC_FLUX_IN.var    = {'flux_mean','Flux','avmonTotEZ','POCflux','DunnePOCflux'};
+	paths.diag.POC_FLUX_IN.zvar   = {[],[],[],'DEPTH',[]};
+	paths.diag.POC_FLUX_IN.dim    = {'xyt','xyt','yxt','yxz','yxt'};
+	paths.diag.POC_FLUX_IN.lon    = {'lon','lon','lon','LON','lon'};
+	paths.diag.POC_FLUX_IN.lat    = {'lat','lat','lat','LAT','lat'};
+	paths.diag.POC_FLUX_IN.name   = {'Clements et al. (2023) 100m POC Flux',...
+									 'Clements et al. (2023) Euphotic POC Flux',...
+									 'Siegel et al. (2014) Euphotic POC Flux',...
+									 'Nowicki et al. (2022) Sinking POC flux',...
+                                     'Dunne et al. (2007) Euphotic POC flux' };
+	paths.diag.POC_FLUX_IN.units  = {'$mmol$ $C$ $m^{-2}$ $s^{-1}$',...
+									 '$mmol$ $C$ $m^{-2}$ $s^{-1}$',...
+									 '$mmol$ $C$ $m^{-2}$ $s^{-1}$',...
+									 '$mmol$ $C$ $m^{-2}$ $s^{-1}$',...
+                                     '$mmol$ $C$ $m^{-2}$ $s^{-1}$'};
+	paths.diag.POC_FLUX_IN.factor = {1/(12.01*86400),... % mgC/m2/d to mmolC/m2/s
+									 1/(12.01*86400),... % mgC/m2/d to mmolC/m2/s
+									 1/(12.01*86400),... % mgC/m2/d to mmolC/m2/s 
+									 1/(86400*365.25),...% per year to per s
+                                     1/(12.01*86400)};   % mgC/m2/d to mmolC/m2/s
+
 
 	% Fe data from Tagliabue
-	paths.diag.Fe.file   = {'/data/project6/ROMS/PACMEC25/Tagliabue_data/Monthly_dFe.nc'};
+	paths.diag.Fe.file   = {'/data/project6/ROMS/PACMEC25/Tagliabue_data/Monthly_dFe_V2.nc'};
 	paths.diag.Fe.type   = {'nc'};
 	paths.diag.Fe.var    = {'dFe_RF'};
 	paths.diag.Fe.zvar   = {'Depth'};
 	paths.diag.Fe.dim    = {'xyzt'};
 	paths.diag.Fe.lon    = {'Longitude'};
 	paths.diag.Fe.lat    = {'Latitude'};
-	paths.diag.Fe.name   = {'Monthly dissolved iron simulated from random forest algorithm'};
+	paths.diag.Fe.name   = {'Huang et al. (2022)'};
 	paths.diag.Fe.units  = {'$mmol$ $Fe$ $m^{-3}$'};
 	paths.diag.Fe.factor = {(1/1000)}; % nmol/L to mmol/m3
+
+	% FG_N2O from Simon Yang
+	paths.diag.FG_N2O.file   = {'/data/project1/demccoy/ROMS/validation/n2o/yang_n2o_flux.mat'};
+	paths.diag.FG_N2O.type   = {'mat'};
+	paths.diag.FG_N2O.var    = {'dat'};
+	paths.diag.FG_N2O.zvar   = {[]};
+	paths.diag.FG_N2O.dim    = {'xyt'};
+	paths.diag.FG_N2O.lon    = {'lon'};
+	paths.diag.FG_N2O.lat    = {'lat'};
+	paths.diag.FG_N2O.name   = {'Yang et al. (2020)'};
+	paths.diag.FG_N2O.units  = {'$mmol$ $N_2O$ $m^{-2}$ s$^{-1}$'};
+	paths.diag.FG_N2O.factor = {[1]}; % already converted
 
 end % end method initPlots

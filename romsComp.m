@@ -37,6 +37,8 @@ function obj = romsComp(obj,file,plotchoice)
 %	16 == longitude bgc rate slices
 %   17 == latitude N-loss
 %   18 == longitude N-loss
+%       19 == Fe depth slices  
+%       20 == POC flux comparisons at 75m   
 %	------------------------------
 %	------ OTHER DIAGNOSTICS -----
 %	------------------------------
@@ -320,19 +322,40 @@ plots(pltcnt).on = plotchoice(pltcnt);
 						     linspace(0,100,101);linspace(0,100,101);linspace(0,100,101); linspace(0,100,101)};    
 	plots(pltcnt).dlevs   = {linspace(-100,100,101);linspace(-100,100,101);linspace(-100,100,101);...  
 					         linspace(-100,100,101);linspace(-100,100,101);linspace(-100,100,101); linspace(-100,100,101)};
+
+% (19) BGC: Fe depth slices
+pltcnt = pltcnt + 1;
+plots(pltcnt).on = plotchoice(pltcnt);
+        plots(pltcnt).opt   = [1];
+        plots(pltcnt).vars  = {'Fe'};
+        plots(pltcnt).cmaps = {'thermal'};
+        plots(pltcnt).zdeps = [0 50 150 300 450 600 800 1000 1500 2000];
+        plots(pltcnt).bal   = [2];
+        plots(pltcnt).levs  = {linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),...
+                                                   linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),...
+                                                   linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40)};
+    plots(pltcnt).dlevs = {linspace(-1e-3,1e-3,41)};
+
+% (20) POC_FLUX_IN comparisons
+pltcnt = pltcnt + 1;
+plots(pltcnt).on = plotchoice(pltcnt);
+        plots(pltcnt).cmaps = {'deep'};
+        plots(pltcnt).levs  = {linspace(0,5e-4,40)};
+        plots(pltcnt).dlevs = {linspace(-5e-4,5e-4,41)};
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % START 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Change to diagDir and load overrides options
+% Change to diagDir and load eoverrides options
 compDir = ['/data/project1/demccoy/ROMS/',obj(1).info.simName,'/analysis/comp/'];
 mkdir(compDir)
 cd(compDir);
-try; run(['comp_overrides.m']);
-catch; disp('No overrides'); 
-end
+%try; run(['comp_overrides.m']);
+%catch; disp('No overrides'); 
+%end
 comppath = [compDir,'plots/',obj(1).info.runName,'_VS_',obj(2).info.runName,'/'];
 mkdir(comppath)
 
@@ -1305,3 +1328,95 @@ if plots(pltcnt).on;
     end
 	clearvars -except obj plots comppath file pltcnt
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fe depth slices 
+% P19
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pltcnt = pltcnt + 1;
+if plots(pltcnt).on;
+        unpactStruct(plots(pltcnt));
+        % Go through each compare with diagnostics
+        % Variable loop
+        for v = 1:length(vars)
+                if ~opt(v)
+                        disp(['...skipping ',vars{v},'...']);
+                        continue
+                end
+                for o = 1:length(obj)
+                        obj(o) = clearROMS(obj(o));
+                        obj(o) = zslice(obj(o),vars(v),zdeps,file{o});
+                        tmp{o} = obj(o).data.avg.(vars{v}).slice;
+                end
+                % Depth loop
+                for z = 1:length(zdeps)
+                        close all
+                        roms1dat    = nanmean(squeeze(tmp{1}(:,:,z,:)),3);
+                        roms2dat    = nanmean(squeeze(tmp{2}(:,:,z,:)),3);
+                        [figs,cbs] = mapCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{v},'levels',levs{v,z},'difflevels',dlevs{v});
+                        % ROMS1 figure
+                        set(0,'CurrentFigure',figs(1));
+                        title([obj(1).info.runTit,' ',obj(1).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+                        ylabel(cbs(1),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
+                        export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms1'],'-m2.5');
+                        close(figs(1));
+                        % ROMS2 figure
+                        set(0,'CurrentFigure',figs(2));
+                        title([obj(2).info.runTit,' ',obj(2).data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+                        ylabel(cbs(2),obj(2).data.avg.(vars{v}).units,'Interpreter','Latex');
+                        export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms2'],'-m2.5');
+                        close(figs(2));
+                        % Diff figure
+                        set(0,'CurrentFigure',figs(3));
+                        title(['ROMS Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+                        ylabel(cbs(3),obj(1).data.avg.(vars{v}).units,'Interpreter','Latex');
+                        export_fig('-png',[comppath,vars{v},'_z',num2str(zdeps(z)),'_roms_diff'],'-m2.5');
+                        close(figs(3));
+                end
+        end
+    for o = 1:length(obj)
+        obj(o) = clearROMS(obj(o));
+    end
+        clearvars -except obj plots comppath file pltcnt
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% slice maps of POC_FLUX_IN
+% P20
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pltcnt = pltcnt + 1;
+if plots(pltcnt).on;
+        unpactStruct(plots(pltcnt));
+      
+        % Load POC FLUX IN
+        for o = 1:length(obj)
+       	  obj(o) = clearROMS(obj(o));
+       	  obj(o) = zslice(obj(o),{'POC_FLUX_IN'},75,file{o});
+        end
+                close all
+                roms1dat    = nanmean(obj(1).data.avg.POC_FLUX_IN.slice,3);
+                roms2dat    = nanmean(obj(2).data.avg.POC_FLUX_IN.slice,3);
+                [figs,cbs] = mapCmp(obj(1),roms1dat,roms2dat,'cmap',cmaps{1},'levels',levs{1},'difflevels',dlevs{1});
+                % ROMS1 figure
+                set(0,'CurrentFigure',figs(1));
+                title([obj(1).info.runTit,' ',obj(1).data.avg.POC_FLUX_IN.name,': 75m'],'Interpreter','Latex');
+                ylabel(cbs(1),obj(1).data.avg.POC_FLUX_IN(1).units,'Interpreter','Latex');
+                export_fig('-png',[comppath,'POC_FLUX_IN_roms1'],'-m2.5');
+                close(figs(1));
+                % ROMS2 figure
+                set(0,'CurrentFigure',figs(2));
+                title([obj(2).info.runTit,' ',obj(2).data.avg.POC_FLUX_IN.name,': 75m'],'Interpreter','Latex');
+                ylabel(cbs(2),obj(2).data.avg.POC_FLUX_IN(1).units,'Interpreter','Latex');
+                export_fig('-png',[comppath,'POC_FLUX_IN_roms2'],'-m2.5');
+                close(figs(2));
+                % Diff figure
+                set(0,'CurrentFigure',figs(3));
+                title(['ROMS Difference'],'Interpreter','Latex');
+                ylabel(cbs(3),obj(1).data.avg.POC_FLUX_IN(1).units,'Interpreter','Latex');
+                export_fig('-png',[comppath,'POC_FLUX_IN_diff'],'-m2.5');
+
+
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

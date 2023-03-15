@@ -31,10 +31,13 @@ function obj = romsDiag(obj,file,plotchoice)
 %	12 == N-cycle profile comparisons');
 %	13 == ROMS vs OCIM (N2O)
 %	14 == Gridded obs vs ROMS (including ratios) 
+%	15 == Fe depth slices vs Tagliabue
+%	16 == Fe transects vs GEOTRACES
+%	17 == POC flux comparisons at 75m
 %	------------------------------');
 %	------ OTHER DIAGNOSTICS -----');
 %	------------------------------');
-%	15 == slice degree maps');
+%	18 == slice degree maps');
 %
 % Example for year 10:
 % - obj = romsDiag(obj,10,[1:11]);
@@ -248,7 +251,37 @@ plots(pltcnt).on = plotchoice(pltcnt);
 	plots(pltcnt).xlims = [100 300];
 	plots(pltcnt).ylims = [-40  60];
 
-% (15) OTHER: Slice maps
+% (15) BGC: Fe depth slices vs Tagliabue 
+pltcnt = pltcnt + 1;
+plots(pltcnt).on = plotchoice(pltcnt);
+	plots(pltcnt).opt   = [1];
+	plots(pltcnt).vars  = {'Fe'};
+	plots(pltcnt).cmaps = {'thermal'};
+	plots(pltcnt).zdeps = [0 50 150 300 450 600 800 1000 1500 2000];
+	plots(pltcnt).bal   = [2];
+	plots(pltcnt).levs  = {linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),...
+						   linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),...
+						   linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40),linspace(0,1e-3,40)};
+    plots(pltcnt).dlevs = {linspace(-1e-3,1e-3,41)};
+
+% (16) BGC: Fe lon/lat slices vs GEOTRACES 
+pltcnt = pltcnt + 1;
+plots(pltcnt).on = plotchoice(pltcnt);
+	%plots(pltcnt).sections = {'GP02','GP13','GP16','GP18','GP19'};
+	plots(pltcnt).sections = {'GP16'};
+	plots(pltcnt).coord    = {'lat'};
+	plots(pltcnt).cmaps    = {'thermal'};
+	plots(pltcnt).levs     = {linspace(0,1e-3,40)};
+	plots(pltcnt).dlevs    = {linspace(-1e-3,1e-3,41)};
+
+% (17) POC_FLUX_IN comparisons 
+pltcnt = pltcnt + 1;
+plots(pltcnt).on = plotchoice(pltcnt);
+	plots(pltcnt).cmaps = {'deep'};
+	plots(pltcnt).levs  = {linspace(0,5e-4,40)};
+	plots(pltcnt).dlevs = {linspace(-5e-4,5e-4,41)};
+
+% (18) OTHER: Slice maps
 pltcnt = pltcnt + 1;
 plots(pltcnt).on = plotchoice(pltcnt);
 	plots(pltcnt).lons = [210 255 272];
@@ -533,21 +566,18 @@ if plots(pltcnt).on;
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
 			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m2.5');
-			export_fig('-pdf',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms']);
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
 			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m2.5');
-			export_fig('-pdf',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag']);
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
 			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m2.5');	
-			export_fig('-pdf',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff']);	
 		end
 		obj.data.avg = [];
 		obj.diag = [];
@@ -819,7 +849,6 @@ if plots(pltcnt).on;
     end
 	% Call extract roms
 	for i = 1:length(roms_regions)
-		%if exist(['data/',obj.info.runName,'/roms_tracers_region_',region_name{i},'.mat'])==0
 		if (1)
 			mkdir(['data/',obj.info.runName]);
 			disp('Extracting ROMS data');
@@ -875,6 +904,170 @@ if plots(pltcnt).on;
 	clearvars -except obj plots pltcnt file
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fe depth slices 
+% P15
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pltcnt = pltcnt + 1;
+if plots(pltcnt).on;
+	unpactStruct(plots(pltcnt));
+	% Go through each compare with diagnostics
+	% Variable loop
+	for v = 1:length(vars)
+		if ~opt(v)
+			disp(['...skipping ',vars{v},'...']);
+			continue
+		end
+		obj = clearROMS(obj);
+		obj = zslice(obj,vars(v),zdeps,file);
+		obj = loadDiag(obj,vars(v),zdeps);
+		% Depth loop
+		for z = 1:length(zdeps)
+			close all
+			romsdat    = nanmean(squeeze(obj.data.avg.(vars{v}).slice(:,:,z,:)),3);
+			diagdat    = nanmean(squeeze(obj.diag.(vars{v}).slice(:,:,z,:)),3);
+			[figs,cbs] = mapCmp(obj,romsdat,diagdat,'cmap',cmaps{v},'levels',levs{v,z},'difflevels',dlevs{v});
+			% ROMS figure
+			set(0,'CurrentFigure',figs(1));
+			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m2.5');
+			close(figs(1));
+			% Diag figure
+			set(0,'CurrentFigure',figs(2));
+			title([obj.diag.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m2.5');
+			close(figs(2));	
+			% Diff figure
+			set(0,'CurrentFigure',figs(3));
+			title(['Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
+			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m2.5');	
+		end
+		obj.data.avg = [];
+		obj.diag = [];
+	end
+	% Clear data
+	obj = clearROMS(obj);
+	clearvars -except obj plots pltcnt file
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fe comparisons against GEOTRACES 
+% P16
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pltcnt = pltcnt + 1;
+if plots(pltcnt).on;
+	unpactStruct(plots(pltcnt));
+
+	% Go through each transect
+	fdir = ['/data/project1/demccoy/ROMS/validation/Fe/'];
+	for i = 1:length(sections)
+		this_section = load([fdir,sections{i},'.mat']);
+		% Call getProfile at each station
+		obj = getProfile(obj,{'Fe'},this_section.log0,this_section.lat0,file);
+		% Cycle through each station and interpolate ROMS data
+		tmp = nan([size(this_section.Fe0) 12]);
+		for j = 1:length(this_section.log0)
+			this_depth = this_section.dep0(j,:);
+			idx = ~isnan(this_depth);
+			good_depths = this_depth(idx);
+			for t = 1:size(obj.profile.depth,3)
+				% Get data for interpolation
+				tmpdep       = squeeze(obj.profile.depth(j,:,t));
+				tmpdat       = squeeze(obj.data.avg.Fe.profile(j,:,t));
+				% Override surface point to be 0
+				tmpdep(end)  = 0;
+				tmpout       = interp1(tmpdep,tmpdat,-good_depths);
+				tmp(j,find(idx==1),t) = tmpout; 
+			end	
+		end
+		% Get annual average
+		out{i}.roms = tmp; 
+		out{i}.diag = repmat(this_section.Fe0 ./ 1000, [1 1 12]); %nmol/L to mmol/m3
+		out{i}.dep  = repmat(this_section.dep0, [1 1 12]);
+		out{i}.lon  = obj.profile.lon;
+		out{i}.lat  = obj.profile.lat;
+	end
+
+	% Make slice figures
+	for i = 1:length(sections)
+		obj.slice.depth = out{i}.dep;
+		if strcmp(coord{i},'lon');
+			obj.slice.coord = 'longitude';
+			obj.slice.deg   = out{i}.lat';
+		elseif strcmp(coord,'lat');
+			obj.slice.coord = 'latitude';
+			obj.slice.deg   = out{i}.lon';
+		end
+		obj.slice.deg   = repmat(obj.slice.deg,[1 size(obj.slice.depth,2)]);
+		romsdat = out{i}.roms;	
+		diagdat = out{i}.diag;
+		[figs,cbs] = sliceCmp(obj,romsdat,diagdat,0,'cmap',cmaps{1},'xlims',[min(obj.slice.deg(:)) max(obj.slice.deg(:))],'zlims',[0 5000],...
+			'figdim',0.5,'slice',1,'levels',levs{1},'difflevels',dlevs{1});
+		% ROMS figure
+		set(0,'CurrentFigure',figs(1));
+		title(['ROMS ',obj.data.avg.Fe.name,': ',sections{i}],'Interpreter','Latex');
+		ylabel(cbs(1),obj.data.avg.Fe.units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_roms'],'-m2.5');
+		close(figs(1))
+		% Diag figure
+		set(0,'CurrentFigure',figs(2));
+		title(['GEOTRACES: ',sections{i}],'Interpreter','Latex');
+		ylabel(cbs(2),obj.data.avg.Fe.units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diag'],'-m2.5');
+		close(figs(2))
+		% Difference figure
+		set(0,'CurrentFigure',figs(3));
+		title(['Difference: ',sections{i}],'Interpreter','Latex');
+		ylabel(cbs(3),obj.data.avg.Fe.units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diff'],'-m2.5');
+		close(figs(3))
+	end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% slice maps of POC_FLUX_IN
+% P17
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pltcnt = pltcnt + 1;
+if plots(pltcnt).on;
+	unpactStruct(plots(pltcnt));
+
+	% Load POC FLUX IN
+	obj = clearROMS(obj);
+	obj = zslice(obj,{'POC_FLUX_IN'},75,file);
+	obj = loadDiag(obj,{'POC_FLUX_IN'},75);
+
+	% Depth loop
+	for d = 2:length(obj.diag.POC_FLUX_IN); % skip 100m estimate from Clements
+		close all
+		romsdat    = nanmean(obj.data.avg.POC_FLUX_IN.slice,3);
+		diagdat    = nanmean(obj.diag.POC_FLUX_IN(d).slice,3);
+		[figs,cbs] = mapCmp(obj,romsdat,diagdat,'cmap',cmaps{1},'levels',levs{1},'difflevels',dlevs{1});
+		% ROMS figure
+		set(0,'CurrentFigure',figs(1));
+		title(['ROMS ',obj.data.avg.POC_FLUX_IN.name,': 75m'],'Interpreter','Latex');
+		ylabel(cbs(1),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_roms'],'-m2.5');
+		close(figs(1));
+		% Diag figure
+		set(0,'CurrentFigure',figs(2));
+		title([obj.diag.POC_FLUX_IN(d).name,': Euphotic'],'Interpreter','Latex');
+		ylabel(cbs(2),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diag',num2str(d)],'-m2.5');
+		close(figs(2));
+		% Diff figure
+		set(0,'CurrentFigure',figs(3));
+		title(['Difference'],'Interpreter','Latex');
+		ylabel(cbs(3),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diff',num2str(d)],'-m2.5');
+	end
+
+
+
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% OTHER DIAGNOSTICS %%%%%%%%%%
@@ -882,7 +1075,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % slice maps
-% P15
+% P18
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
