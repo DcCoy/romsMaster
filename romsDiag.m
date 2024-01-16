@@ -318,7 +318,7 @@ pltcnt = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Variable loop
 	for v = 1:length(vars)
 		if ~opt(v)
@@ -338,22 +338,20 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m5');
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m5');
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m2.5');	
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m5');	
 		end
-		obj.data.avg = [];
-		obj.diag = [];
 	end
 	% Clear data
 	obj = clearROMS(obj);
@@ -366,7 +364,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	for v = 1:length(vars);
 		if ~opt(v)
 			disp(['...skipping ',vars{v},'...']);
@@ -384,23 +382,21 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_roms'],'-m5');
 			close(figs(1))
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diag'],'-m5');
 			close(figs(2))
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diff'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diff'],'-m5');
 			close(figs(3))
 		end
-		obj.data.avg = [];
-		obj.diag = [];
 	end
 	% Clear data
 	obj = clearROMS(obj);
@@ -413,7 +409,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	obj = clearROMS(obj);
 	obj = loadData(obj,vars(opt==1),file);
 	obj = loadDiag(obj,vars(opt==1),0);
@@ -431,19 +427,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_roms'],'-m5');
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v})(d).name],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v})(d).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diag_',num2str(d)],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diag_',num2str(d)],'-m5');
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diff_',num2str(d)],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diff_',num2str(d)],'-m5');
 			close(figs(3));
 		end
 	end
@@ -458,7 +454,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	for v = 1:length(vars);
 		if ~opt(v)
 			disp(['...skipping ',vars{v},'...']);
@@ -476,23 +472,21 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_roms'],'-m5');
 			close(figs(1))
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diag'],'-m5');
 			close(figs(2))
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diff'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diff'],'-m5');
 			close(figs(3))
 		end
-		obj.data.avg = [];
-		obj.diag = [];
 	end
 	% Clear data
 	obj = clearROMS(obj);
@@ -505,7 +499,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	obj = equatorUcmp(obj,'179E_160W');
 	diagdat = obj.diag.u.slice;
 	romsdat = nanmean(obj.data.avg.u.slice,3);
@@ -515,19 +509,19 @@ if plots(pltcnt).on;
 	set(0,'CurrentFigure',figs(1));
 	title(['ROMS ',obj.data.avg.(vars{1}).name,': ',num2str(obj.slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(1),obj.data.avg.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-png',[obj.paths.plots.diag,'equ_roms'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,'equ_roms'],'-m5');
 	close(figs(1))
 	% Diag figure
 	set(0,'CurrentFigure',figs(2));
 	title([obj.diag.(vars{1}).name,': ',num2str(obj.slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(2),obj.diag.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-png',[obj.paths.plots.diag,'equ_diag'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,'equ_diag'],'-m5');
 	close(figs(2))
 	% Difference figure
 	set(0,'CurrentFigure',figs(3));
 	title(['Difference: ',num2str(obj.slice.sect-360),'$^oW$'],'Interpreter','Latex');
 	ylabel(cbs(3),obj.data.avg.(vars{1}).units,'Interpreter','Latex');
-	export_fig('-png',[obj.paths.plots.diag,'equ_diff'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,'equ_diff'],'-m5');
 	close(figs(3))
 	% Clear data
 	obj = clearROMS(obj);
@@ -544,7 +538,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Go through each compare with diagnostics
 	% Variable loop
 	for v = 1:length(vars)
@@ -553,34 +547,41 @@ if plots(pltcnt).on;
 			continue
 		end
 		obj = clearROMS(obj);
-		obj = zslice(obj,vars(v),zdeps,file);
+		if length(file) == 1
+			obj = zslice(obj,vars(v),zdeps,file);
+		else
+			obj = getAvgData(obj,vars(v),file,'zlvl',zdeps);
+		end
 		obj = loadDiag(obj,vars(v),zdeps);
 		% Depth loop
 		for z = 1:length(zdeps)
 			close all
-			romsdat    = nanmean(squeeze(obj.data.avg.(vars{v}).slice(:,:,z,:)),3);
+			if length(file) == 1
+				romsdat = nanmean(squeeze(obj.data.avg.(vars{v}).slice(:,:,z,:)),3);
+			else
+				romsdat = obj.data.avg.(vars{v}).slice;
+			end
 			diagdat    = nanmean(squeeze(obj.diag.(vars{v}).slice(:,:,z,:)),3);
 			[figs,cbs] = mapCmp(obj,romsdat,diagdat,'cmap',cmaps{v},'levels',levs{v,z},'difflevels',dlevs{v});
 			% ROMS figure
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m5');
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m5');
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m2.5');	
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m5');	
 		end
-		obj.data.avg = [];
-		obj.diag = [];
+		obj = clearROMS(obj);
 	end
 	% Clear data
 	obj = clearROMS(obj);
@@ -593,7 +594,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	for v = 1:length(vars);
 		if ~opt(v)
 			disp(['...skipping ',vars{v},'...']);
@@ -617,19 +618,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_roms'],'-m5');
 			close(figs(1))
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diag'],'-m5');
 			close(figs(2))
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(lats(l)),'$^oN$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diff'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lat',num2str(lats(l)),'_diff'],'-m5');
 			close(figs(3))
 		end
 		obj.data.avg = [];
@@ -646,7 +647,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	obj = clearROMS(obj);
 	obj = loadData(obj,vars,file);
 	obj = loadDiag(obj,vars,0);
@@ -660,19 +661,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_roms'],'-m5');
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v})(d).name],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v})(d).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diag_',num2str(d)],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diag_',num2str(d)],'-m5');
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diff_',num2str(d)],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_diff_',num2str(d)],'-m5');
 			close(figs(3));
 		end
 	end
@@ -687,7 +688,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	for v = 1:length(vars);
 		if ~opt(v)
 			disp(['...skipping ',vars{v},'...']);
@@ -711,19 +712,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_roms'],'-m5');
 			close(figs(1))
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diag'],'-m5');
 			close(figs(2))
 			% Difference figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(lons(l)-360),'$^oW$'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diff'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_lon',num2str(lons(l)),'_diff'],'-m5');
 			close(figs(3))
 		end
 		obj.data.avg = [];
@@ -740,7 +741,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	obj = loadData(obj,vars,file);
 	obj = loadDiag(obj,vars,0);
 	% Reduce data
@@ -757,14 +758,14 @@ if plots(pltcnt).on;
 	title(['ROMS ',obj.data.avg.(vars{1}).name,': sfc'],'Interpreter','Latex');
 	ylabel(cbs(1),obj.data.avg.(vars{1}).units,'Interpreter','Latex');
 	cbs(1).XTickLabel = absLbls; 
-	export_fig('-png',[obj.paths.plots.diag,vars{1},'_roms'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,vars{1},'_roms'],'-m5');
 	close(figs(1));
 	% Diag figure
 	set(0,'CurrentFigure',figs(2));
 	title([obj.diag.(vars{1}).name,': sfc'],'Interpreter','Latex');
 	ylabel(cbs(2),obj.diag.(vars{1}).units,'Interpreter','Latex');
 	cbs(2).XTickLabel = absLbls; 
-	export_fig('-png',[obj.paths.plots.diag,vars{1},'_diag'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,vars{1},'_diag'],'-m5');
 	close(figs(2));
 	% Diff figure
 	set(0,'CurrentFigure',figs(3));
@@ -773,7 +774,7 @@ if plots(pltcnt).on;
 	cbs(3).XTick = diffLevs;
 	cbs(3).XTickLabel = diffLbls; 
 	cbs(3).Limits = diffCaxis;
-	export_fig('-png',[obj.paths.plots.diag,vars{1},'_diff'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,vars{1},'_diff'],'-m5');
 	close(figs(3));
 	% Clear data
 	obj = clearROMS(obj);
@@ -786,7 +787,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
     % Get OMZ thickness
 	obj = computeVar(obj,{'OMZ'},file,'thresh',omzthresh);
 	obj = OMZthick(obj,omzthresh);
@@ -805,18 +806,18 @@ if plots(pltcnt).on;
 			title(['ROMS: ',obj.data.avg.OMZ.name,'($O_2$ $<$ ',num2str(omzthresh(th)),' $mmol$ $m^{-3}$)'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.OMZ.units,'Interpreter','Latex')
 			set(gcf,'ColorMap',cmap);
-			export_fig('-png',[obj.paths.plots.diag,'OMZ_roms_th',num2str(omzthresh(th))],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,'OMZ_roms_th',num2str(omzthresh(th))],'-m5');
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.OMZ(d).name],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.OMZ(d).units,'Interpreter','Latex')
 			set(gcf,'ColorMap',cmap);
-			export_fig('-png',[obj.paths.plots.diag,'OMZ_diag_',num2str(d),'_th',num2str(omzthresh(th))],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,'OMZ_diag_',num2str(d),'_th',num2str(omzthresh(th))],'-m5');
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.OMZ.units,'Interpreter','Latex')
-			export_fig('-png',[obj.paths.plots.diag,'OMZ_diff_',num2str(d),'_th',num2str(omzthresh(th))],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,'OMZ_diff_',num2str(d),'_th',num2str(omzthresh(th))],'-m5');
 			close all
 		end
 	end
@@ -831,12 +832,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Call data_locations
 	if exist([obj.paths.plots.diag,'prof_data_locations.png'])==0
 		disp('Plotting profile locations');
 		fig = data_locations(obj,obs_regions,roms_regions);
-		export_fig('-png',[obj.paths.plots.diag,'prof_data_locations'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'prof_data_locations'],'-m5');
 		close all
 	end
 	% Call extract_obs	
@@ -871,11 +872,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Call ocim_locations
 	if exist([obj.paths.plots.diag,'ocim_locations.png'])==0
 		fig = ocim_locations(obj,regions);
-		export_fig('-png',[obj.paths.plots.diag,'ocim_locations'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'ocim_locations'],'-m5');
 		close all
 	end
 	% Extract OCIM	
@@ -894,7 +895,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Call extract_3d_obs 
 	extract_3d_obs(obj,xlims,ylims);
 	% Call extract_3d_roms
@@ -910,7 +911,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Go through each compare with diagnostics
 	% Variable loop
 	for v = 1:length(vars)
@@ -931,19 +932,19 @@ if plots(pltcnt).on;
 			set(0,'CurrentFigure',figs(1));
 			title(['ROMS ',obj.data.avg.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(1),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_roms'],'-m5');
 			close(figs(1));
 			% Diag figure
 			set(0,'CurrentFigure',figs(2));
 			title([obj.diag.(vars{v}).name,': ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(2),obj.diag.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m2.5');
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diag'],'-m5');
 			close(figs(2));	
 			% Diff figure
 			set(0,'CurrentFigure',figs(3));
 			title(['Difference: ',num2str(zdeps(z)),'m'],'Interpreter','Latex');
 			ylabel(cbs(3),obj.data.avg.(vars{v}).units,'Interpreter','Latex');
-			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m2.5');	
+			export_fig('-png',[obj.paths.plots.diag,vars{v},'_z',num2str(zdeps(z)),'_diff'],'-m5');	
 		end
 		obj.data.avg = [];
 		obj.diag = [];
@@ -959,7 +960,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 
 	% Go through each transect
 	fdir = ['/data/project1/demccoy/ROMS/validation/Fe/'];
@@ -1010,19 +1011,19 @@ if plots(pltcnt).on;
 		set(0,'CurrentFigure',figs(1));
 		title(['ROMS ',obj.data.avg.Fe.name,': ',sections{i}],'Interpreter','Latex');
 		ylabel(cbs(1),obj.data.avg.Fe.units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_roms'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_roms'],'-m5');
 		close(figs(1))
 		% Diag figure
 		set(0,'CurrentFigure',figs(2));
 		title(['GEOTRACES: ',sections{i}],'Interpreter','Latex');
 		ylabel(cbs(2),obj.data.avg.Fe.units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diag'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diag'],'-m5');
 		close(figs(2))
 		% Difference figure
 		set(0,'CurrentFigure',figs(3));
 		title(['Difference: ',sections{i}],'Interpreter','Latex');
 		ylabel(cbs(3),obj.data.avg.Fe.units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diff'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'Fe_',sections{i},'_diff'],'-m5');
 		close(figs(3))
 	end
 end
@@ -1033,7 +1034,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 
 	% Load POC FLUX IN
 	obj = clearROMS(obj);
@@ -1050,23 +1051,20 @@ if plots(pltcnt).on;
 		set(0,'CurrentFigure',figs(1));
 		title(['ROMS ',obj.data.avg.POC_FLUX_IN.name,': 75m'],'Interpreter','Latex');
 		ylabel(cbs(1),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_roms'],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_roms'],'-m5');
 		close(figs(1));
 		% Diag figure
 		set(0,'CurrentFigure',figs(2));
 		title([obj.diag.POC_FLUX_IN(d).name,': Euphotic'],'Interpreter','Latex');
 		ylabel(cbs(2),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diag',num2str(d)],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diag',num2str(d)],'-m5');
 		close(figs(2));
 		% Diff figure
 		set(0,'CurrentFigure',figs(3));
 		title(['Difference'],'Interpreter','Latex');
 		ylabel(cbs(3),obj.diag.POC_FLUX_IN(1).units,'Interpreter','Latex');
-		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diff',num2str(d)],'-m2.5');
+		export_fig('-png',[obj.paths.plots.diag,'POC_FLUX_IN_diff',num2str(d)],'-m5');
 	end
-
-
-
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1079,7 +1077,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pltcnt = pltcnt + 1;
 if plots(pltcnt).on;
-	unpactStruct(plots(pltcnt));
+	unpackStruct(plots(pltcnt));
 	% Get lon lines
 	for i = 1:length(lons)
 		lony{i} = [-90:0.1:90];
@@ -1103,7 +1101,7 @@ if plots(pltcnt).on;
 		m_plot(latx{i}(in==1),laty{i}(in==1),'--k');
 	end
 	title(['Location of depth slices'],'Interpreter','Latex');
-	export_fig('-png',[obj.paths.plots.diag,'trans_locations'],'-m2.5');
+	export_fig('-png',[obj.paths.plots.diag,'trans_locations'],'-m5');
 	% Clear data
 	obj = clearROMS(obj);
 	clearvars -except obj plots pltcnt file
